@@ -1,0 +1,397 @@
+/* style.css
+ *
+ * Direction: "plain colors, things that move". Inspired by hansard.dev and vsqrd.com:
+ * near-black on near-white, one serif for display (Literata), one sans for text (Geist),
+ * a mono for small labels (Geist Mono). Color comes almost entirely from gray steps;
+ * the movement is what gives the page its life.
+ *
+ * Sections in this file:
+ *   1. Tokens (variables)   2. Base   3. Header   4. Hero   5. Terminal
+ *   6. Sections & timeline  7. Cards  8. Contact & footer  9. MOTION
+ */
+
+/* ---------- 1. Tokens ---------- */
+
+:root {
+  --bg: #fafafb;
+  --surface: #f1f1f3;
+  --text: #0e1114;
+  --muted: #5f646b;
+  --faint: #9aa0a6;
+  --line: #e4e5e8;
+  --accent: #0e1114;          /* "plain": the accent is just the ink color */
+
+  --term-bg: #0e1114;         /* the terminal stays dark in both themes */
+  --term-text: #d7dade;
+  --term-dim: #7d848c;
+  --term-green: #9fd8a7;
+
+  --font-display: "Literata", Georgia, serif;
+  --font-body: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --s1: 0.5rem; --s2: 1rem; --s3: 1.5rem; --s4: 2rem; --s6: 3rem; --s8: 4rem; --s12: 6rem;
+
+  --page: 52rem;              /* page width */
+  --measure: 38rem;           /* max width for paragraphs */
+  --radius: 12px;
+
+  /* One easing curve for the whole site: fast start, soft landing. */
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e1114;
+    --surface: #161a1e;
+    --text: #e8eaed;
+    --muted: #9aa0a6;
+    --faint: #5f646b;
+    --line: #23282d;
+    --accent: #e8eaed;
+    --term-bg: #080a0c;
+  }
+}
+
+/* ---------- 2. Base ---------- */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; scroll-padding-top: 5rem; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.page {
+  max-width: var(--page);
+  margin: 0 auto;
+  padding: 0 var(--s2);
+}
+
+a { color: inherit; text-decoration-color: var(--faint); text-underline-offset: 0.2em; }
+a:hover { text-decoration-color: currentColor; }
+
+h1, h2, h3 { margin: 0; line-height: 1.15; font-weight: 500; }
+
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+
+/* ---------- 3. Header ---------- */
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  /* Translucent background + blur: the "frosted glass" effect. */
+  background: color-mix(in srgb, var(--bg) 80%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+
+.header-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 3.5rem;
+}
+
+.wordmark { font-family: var(--font-display); font-size: 1.125rem; text-decoration: none; }
+
+.site-header nav { display: flex; gap: var(--s3); }
+.site-header nav a {
+  font-size: 0.875rem;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.site-header nav a:hover { color: var(--text); }
+
+@media (max-width: 34rem) {
+  .site-header nav a:not(:last-child) { display: none; } /* keep just "Contact" on phones */
+}
+
+/* ---------- 4. Hero ---------- */
+
+.hero { padding: var(--s12) 0 var(--s8); }
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 var(--s3);
+}
+
+.hero h1 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(2.5rem, 7vw, 4.25rem);
+  letter-spacing: -0.025em;
+  line-height: 1.05;
+  max-width: 14ch;
+}
+
+.hero h1 em { font-style: italic; color: var(--muted); }
+
+.intro {
+  color: var(--muted);
+  font-size: 1.1875rem;
+  max-width: var(--measure);
+  margin: var(--s3) 0 var(--s4);
+}
+
+.links { display: flex; flex-wrap: wrap; gap: var(--s1); list-style: none; padding: 0; margin: 0; }
+
+.pill {
+  display: inline-block;
+  padding: 0.375rem 0.875rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 0.875rem;
+  text-decoration: none;
+  transition: background 0.2s, border-color 0.2s, transform 0.2s var(--ease);
+}
+.pill:hover { background: var(--surface); border-color: var(--faint); transform: translateY(-1px); }
+
+/* ---------- 5. Terminal ---------- */
+
+.terminal {
+  margin: var(--s8) 0 0;
+  background: var(--term-bg);
+  color: var(--term-text);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.06) inset, 0 24px 60px -24px rgb(14 17 20 / 0.45);
+}
+
+.terminal-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: 0.625rem var(--s2);
+  border-bottom: 1px solid rgb(255 255 255 / 0.07);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--term-dim);
+}
+
+.dots { display: flex; gap: 6px; }
+.dots i { width: 10px; height: 10px; border-radius: 50%; background: rgb(255 255 255 / 0.14); }
+
+.terminal-title { flex: 1; }
+
+.terminal-toggle {
+  font: inherit;
+  color: var(--term-dim);
+  background: none;
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 6px;
+  padding: 0.125rem 0.5rem;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+.terminal-toggle:hover { color: var(--term-text); border-color: rgb(255 255 255 / 0.3); }
+
+.terminal-body {
+  margin: 0;
+  padding: var(--s3);
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  line-height: 1.7;
+  white-space: pre-wrap;      /* long lines wrap on phones instead of scrolling */
+  overflow-wrap: anywhere;
+}
+
+.line { display: block; }
+.line[hidden] { display: none; } /* our display:block would otherwise beat the hidden attribute */
+.line.out { color: var(--term-green); margin-bottom: 0.5rem; }
+.prompt { color: var(--term-dim); }
+
+.cursor {
+  display: inline-block;
+  width: 0.55em;
+  height: 1.1em;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  background: var(--term-text);
+  animation: blink 1s steps(1) infinite;
+}
+
+/* ---------- 6. Sections & timeline ---------- */
+
+.section { padding: var(--s8) 0; border-top: 1px solid var(--line); }
+
+.label {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s2);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin-bottom: var(--s4);
+}
+.label-num { color: var(--faint); }
+
+.prose { max-width: var(--measure); }
+.prose p { margin: 0 0 var(--s2); }
+
+.timeline {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 var(--s4);
+}
+
+/* The vertical line, drawn as a pseudo-element so it can be animated on its own. */
+.timeline::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 0.5rem;
+  bottom: 0.5rem;
+  width: 1px;
+  background: var(--line);
+  transform-origin: top;
+}
+
+.entry { position: relative; }
+.entry + .entry { margin-top: var(--s4); }
+
+.entry .dot {
+  position: absolute;
+  left: calc(-1 * var(--s4));
+  top: 0.45rem;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1px solid var(--faint);
+}
+
+.entry-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s2); }
+.entry h3 { font-size: 1.0625rem; font-weight: 500; }
+.dates { font-family: var(--font-mono); font-size: 0.8125rem; color: var(--muted); white-space: nowrap; }
+.entry .meta { color: var(--muted); margin: 0.125rem 0 var(--s1); }
+.entry p { margin: 0 0 var(--s1); max-width: var(--measure); }
+
+/* ---------- 7. Cards ---------- */
+
+.cards {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+  gap: var(--s2);
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  padding: var(--s3);
+  transition: border-color 0.3s, transform 0.3s var(--ease), box-shadow 0.3s var(--ease);
+}
+.card:hover {
+  border-color: var(--line);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 30px -18px rgb(14 17 20 / 0.35);
+}
+
+.card h3 { font-size: 1.0625rem; font-weight: 500; margin-bottom: var(--s1); }
+.card h3 a { text-decoration: none; }
+.card .arrow { display: inline-block; color: var(--faint); transition: transform 0.3s var(--ease); }
+.card:hover .arrow { transform: translate(2px, -2px); color: var(--text); }
+.card p { color: var(--muted); margin: 0 0 var(--s2); }
+
+.tags { display: flex; flex-wrap: wrap; gap: 0.375rem; list-style: none; padding: 0; margin: 0; }
+.tags li {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  padding: 0.125rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+}
+
+/* ---------- 8. Contact & footer ---------- */
+
+.contact-line {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 5vw, 3rem);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin: 0 0 var(--s3);
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--s1);
+  padding-top: var(--s4);
+  padding-bottom: var(--s6);
+  border-top: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+/* ---------- 9. MOTION ----------
+ *
+ * How the scroll reveal works, in three steps:
+ *   a) Lisp marks elements with data-reveal (and style="--i: N" for order).
+ *   b) Here, while JS is running (.js), those elements start invisible and 16px low.
+ *   c) motion.js adds .is-visible when they scroll into view; the transition
+ *      animates them to their normal place. --i adds 90ms of delay per step,
+ *      which is what makes a list arrive one item after another ("stagger").
+ */
+
+.js [data-reveal] {
+  opacity: 0;
+  transform: translateY(16px);
+  transition:
+    opacity 0.7s var(--ease) calc(var(--i, 0) * 90ms),
+    transform 0.7s var(--ease) calc(var(--i, 0) * 90ms);
+}
+.js [data-reveal].is-visible { opacity: 1; transform: none; }
+
+/* Timeline: the container doesn't fade — its line *draws* downward, then each
+   entry follows. Same mechanism, different properties. */
+.js .timeline[data-reveal] { opacity: 1; transform: none; }
+.js .timeline[data-reveal]::before { transform: scaleY(0); transition: transform 1.2s var(--ease); }
+.js .timeline[data-reveal].is-visible::before { transform: scaleY(1); }
+
+.js .timeline[data-reveal] .entry {
+  opacity: 0;
+  transform: translateX(-8px);
+  transition:
+    opacity 0.6s var(--ease) calc(200ms + var(--i, 0) * 150ms),
+    transform 0.6s var(--ease) calc(200ms + var(--i, 0) * 150ms);
+}
+.js .timeline[data-reveal].is-visible .entry { opacity: 1; transform: none; }
+
+/* A @keyframes animation runs by itself, unlike a transition that waits for a change. */
+@keyframes blink { 50% { opacity: 0; } }
+
+.terminal.is-paused .cursor { animation: none; }
+
+/* People who ask their OS for less motion get none. Always include this. */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
