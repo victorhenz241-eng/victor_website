@@ -528,8 +528,14 @@ not, so a `WHEN` around it does the job (`demo-video` in `pages.lisp`).
 
 `mp4-size` reads the video's width and height straight from the file, so the
 `<video>` gets `width`/`height` and the page reserves its space before it loads.
-`motion.js` swaps the browser's controls for a small Pause button, and under reduced
-motion it cancels the autoplay. How to record and compress the video: see README.
+The `<video>` has no `autoplay` attribute: an attribute would start it even with
+JavaScript off or with reduced motion on. Playing is opt-in instead. Without JS, or
+under reduced motion, the browser's own controls stay and nothing moves until you
+press play. Otherwise `motion.js` swaps those controls for a small Pause button and
+calls `video.play()` while the video is on screen (and pauses it when it leaves),
+unless you paused it yourself. `play()` returns a *promise* that fails if the browser
+refuses to play (some do, to save data or battery), so the code catches that and the
+button simply says "Play". How to record and compress the video: see README.
 
 ---
 

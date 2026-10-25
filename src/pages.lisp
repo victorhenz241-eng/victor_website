@@ -661,8 +661,9 @@ video's space before it loads, so nothing below it jumps."
 (defun demo-video (video live-url)
   "A looping, silent screen recording, or NIL when the file isn't in static/
 (PROBE-FILE returns NIL for a missing file). VIDEO is the project's :video plist.
-The HTML has `controls`, so without JavaScript you can still stop it; motion.js
-swaps them for a small Pause button, and under reduced motion it pauses the video."
+There is no `autoplay`: without JavaScript, or under reduced motion, the video
+waits with the browser's own controls until you press play. Otherwise motion.js
+swaps those controls for a small Pause button and plays it, muted, while it's on screen."
   (destructuring-bind (&key file poster caption) video
     (when (and file (probe-file (static-path file)))
       (destructuring-bind (width height)
@@ -672,7 +673,7 @@ swaps them for a small Pause button, and under reduced motion it pauses the vide
             (:video :class "demo-video" :data-demo-video t
                     :width ,width :height ,height
                     :poster ,(when (and poster (probe-file (static-path poster))) poster)
-                    :autoplay t :muted t :loop t :playsinline t :preload "metadata" :controls t
+                    :muted t :loop t :playsinline t :preload "metadata" :controls t
              (:source :src ,file :type "video/mp4"))
             (:button :type "button" :class "diagram-toggle demo-toggle" :data-demo-toggle t
                      :hidden t :aria-label "Pause video" "Pause"))
