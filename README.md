@@ -2,7 +2,7 @@
 
 My personal website, generated with Common Lisp. No framework and no npm: SBCL,
 a small HTML renderer written by hand, plain CSS for the design and motion, and
-about 100 lines of plain JavaScript.
+a few hundred lines of plain JavaScript.
 
 ```
 victor-site/
@@ -18,7 +18,8 @@ victor-site/
 │   └── build.lisp         # writes everything into public/
 ├── static/
 │   ├── style.css          # all the design + motion
-│   └── motion.js          # scroll reveal + typing terminal
+│   ├── motion.js          # scroll reveal, typing terminal, header + nav state
+│   └── command-menu.js    # the ⌘K menu
 ├── .claude/settings.json  # puts Claude Code in "Learning" mode for this project
 └── .github/workflows/     # auto-deploy to GitHub Pages
 ```
@@ -100,6 +101,7 @@ when you want the CV link to appear. Keep `*repl*` factual and to four commands.
 - [ ] Swap `html.lisp` for the Spinneret library and compare the two.
 
 **Design & motion** (see LEARN.md)
-- [ ] Make the header shrink when you scroll.
-- [ ] Highlight the current section in the nav.
+- [x] Make the header shrink when you scroll.
+- [x] Highlight the current section in the nav.
+- [x] A ⌘K command menu generated from the data.
 - [ ] Add a second animated "mockup": a small chart that draws itself would suit a data person.
