@@ -36,7 +36,7 @@ the italic part gets its own <em> tag. Lisp data and HTML are the same thing her
 (defparameter *links*
   '(("GitHub"   "https://github.com/victorhenz241-eng")
     ("LinkedIn" nil)                    ; TODO: your LinkedIn URL
-    ("Email"    "victor.henz@essec.edu")                    ; TODO: "mailto:you@example.com"
+    ("Email"    "mailto:victor.henz@essec.edu") ; mailto: makes the link open an email
     ("CV"       nil))                   ; TODO: put cv.pdf in static/ and write "cv.pdf"
   "(label url) pairs. Links with a NIL url are hidden.")
 
