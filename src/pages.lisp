@@ -13,9 +13,10 @@
 (defvar *pages* (make-hash-table :test #'equal)
   "Maps an output file name (\"index.html\") to a function that returns its HTML tree.")
 
-(defmacro defpage (path (&key title description) &body body)
+(defmacro defpage (path (&key title description base) &body body)
   "Define a page written to PATH. Each BODY form is evaluated (at build time) and must
 return an HTML tree, so quote literal HTML: '(:p \"hi\") or `(:p ,*name*).
+BASE is only for pages that need absolute links (the 404 page); see LAYOUT.
 
 Try (macroexpand-1 '(defpage \"x.html\" (:title \"X\") '(:p \"hi\"))) in the REPL
 to see what this macro actually writes for you."
@@ -23,6 +24,7 @@ to see what this macro actually writes for you."
          (lambda ()
            (layout :title ,title
                    :description ,description
+                   :base ,base
                    :body (list ,@body)))))
 
 ;;; ------------------------------------------------------------------
@@ -51,19 +53,23 @@ to see what this macro actually writes for you."
 (defparameter *font-url*
   "https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Literata:ital,wght@0,400;0,500;1,400&display=swap")
 
-(defun site-header ()
+(defun site-header (home)
+  ;; HOME is the address of the home page: "./" on normal pages.
   `(:header :class "site-header"
      (:div :class "page header-inner"
       ;; "./#about" instead of "#about": from a project page, "#about" would look
       ;; for an #about on *that* page. "./" always means the home page.
-      (:a :class "wordmark" :href "./" ,*name*)
+      (:a :class "wordmark" :href ,home ,*name*)
       (:nav
-       (:a :href "./#about" "About")
-       (:a :href "./#work" "Work")
-       (:a :href "./#projects" "Projects")
-       (:a :href "./#contact" "Contact")))))
+       (:a :href ,(format nil "~a#about" home) "About")
+       (:a :href ,(format nil "~a#work" home) "Work")
+       (:a :href ,(format nil "~a#projects" home) "Projects")
+       (:a :href ,(format nil "~a#contact" home) "Contact")))))
 
-(defun layout (&key title description body)
+(defun layout (&key title description base body)
+  "The HTML shared by every page. BASE is NIL for normal pages, which keeps every
+link relative (\"style.css\"), so the site works at any address. Given a BASE like
+\"/victor_website/\", links become absolute (\"/victor_website/style.css\")."
   `(:html :lang "en"
      (:head
       (:meta :charset "utf-8")
@@ -74,11 +80,12 @@ to see what this macro actually writes for you."
       (:link :rel "preconnect" :href "https://fonts.googleapis.com")
       (:link :rel "preconnect" :href "https://fonts.gstatic.com" :crossorigin t)
       (:link :rel "stylesheet" :href ,*font-url*)
-      (:link :rel "stylesheet" :href "style.css")
+      ;; ~@[...~] in FORMAT prints its contents only when the argument isn't NIL.
+      (:link :rel "stylesheet" :href ,(format nil "~@[~a~]style.css" base))
       ;; defer = download now, run after the HTML is parsed.
-      (:script :src "motion.js" :defer t))
+      (:script :src ,(format nil "~@[~a~]motion.js" base) :defer t))
      (:body :id "top"
-      ,(site-header)
+      ,(site-header (or base "./"))
       (:main :class "page" ,@body)
       (:footer :class "page footer"
        (:span "© " ,*name*)
@@ -205,12 +212,24 @@ numbered section per part of the story. Returns a list of trees, one per block."
 
 ;;; One page per project that has a :slug.
 ;;;
-;;; TODO(human): for each project in *projects* that has a :slug, register a page with
-;;; DEFPAGE. Its path is (case-study-path slug), its :title the project's name, its
-;;; :description the summary, and its body (case-study project).
+;;; MAPC, not DOLIST: DOLIST reuses one variable, so every page's stored lambda would
+;;; see the *last* project. Each MAPC call gets its own fresh PROJECT to remember.
 
-(defpage "404.html" (:title "Not found")
+(mapc (lambda (project)
+        (let ((slug (getf project :slug)))
+          (when slug
+            (defpage (case-study-path slug) (:title (getf project :name)
+                                             :description (getf project :summary))
+              (case-study project)))))
+      *projects*)
+
+;;; GitHub Pages serves 404.html for *any* missing address, even a deep one like
+;;; /victor_website/a/b. From there a relative link such as "style.css" would point
+;;; to /victor_website/a/style.css, which doesn't exist, so this one page uses
+;;; absolute links that start with *base-path* (see content.lisp).
+
+(defpage "404.html" (:title "Not found" :base *base-path*)
   `(:div :class "hero"
      (:p :class "eyebrow" "404")
      (:h1 "Nothing " (:em "here") ".")
-     (:p :class "intro" (:a :href "/" "Back home →"))))
+     (:p :class "intro" (:a :href ,*base-path* "Back home →"))))

@@ -12,6 +12,11 @@
   "Your custom domain, e.g. \"victorhenz.com\". Leave NIL until you've bought it
 and pointed it at GitHub Pages — the build then writes the CNAME file for you.")
 
+(defparameter *base-path* (if *domain* "/" "/victor_website/")
+  "Where the site lives on its server. Without a domain, GitHub Pages serves it under
+the repo's name (github.io/victor_website/); with a domain it sits at the root.
+Only the 404 page uses this: normal pages keep relative links, which work anywhere.")
+
 (defparameter *eyebrow* "Data & AI · Luxembourg"
   "The small monospace line above the big headline.")
 
@@ -81,8 +86,9 @@ at once. TODO: make these yours — they're the first thing a recruiter sees mov
      :links (("Live demo" "https://event-market-graph-ten.vercel.app")
              ("Code" "https://github.com/victorhenz241-eng/graphdb-event-market"))
      :stats (("6" "market series: Brent, WTI, EURUSD, USDJPY, US 10Y, VIX")
-             ("Feb–Jul 2026" "window of events and prices")
-             ("0" "servers behind the public demo"))
+             ("~4,500" "geopolitical and central-bank events")
+             ("880" "daily price points")
+             ("6 months" "of events and prices, Feb–Jul 2026"))
      ;; Each section is (heading paragraph paragraph ...).
      :sections
      (("The question"
@@ -90,7 +96,7 @@ at once. TODO: make these yours — they're the first thing a recruiter sees mov
       ("What I built"
        "It was a team project. I built the frontend and the infrastructure."
        "The frontend is a React page that lays the graph out as a timeline: markets on top, trading days in the middle, events, themes and countries below. When the agent answers a question, each step appears as it happens, the nodes it touches light up and the edges it walks are animated."
-       "The infrastructure runs the whole stack with Docker Compose: Neo4j with Graph Data Science, a local Ollama model, the API and an Nginx reverse proxy. Every port is bound to localhost, the proxy rate-limits requests, and the one endpoint that runs the model needs an API key.")
+       "The infrastructure runs the whole stack with Docker Compose: Neo4j with Graph Data Science, a local Ollama model, the API and an Nginx reverse proxy. Every port is bound to localhost, the proxy rate-limits requests, and asking the model needs an API key.")
       ("How it works"
        "Events come from GDELT and from central-bank rate decisions; prices come from FRED. The API computes correlations, candidate events for a move, shortest paths and PageRank. A LangGraph agent answers questions in plain English and shows the graph paths and the Cypher it used.")
       ("Safety by design"
@@ -110,11 +116,11 @@ at once. TODO: make these yours — they're the first thing a recruiter sees mov
      (("The problem"
        "Finding an internship has two hard parts. Aggregators list thousands of postings and most don't fit one person. And cold applications go through applicant-tracking systems where nothing comes back. The best channel is a warm contact at the company.")
       ("What I built"
-       "Automations that run overnight with no one present: they fetch listings, score them against a fixed profile with an LLM, check eligibility from the full job description, and fold duplicates through a small Rust service. Everything lands in one Postgres table on Supabase."
-       "A Next.js web app is the only thing I touch. It reads that table, lets me triage quickly, tracks each role through a pipeline, searches for people at the company and drafts outreach text. A Telegram bot with an AI agent answers questions about the table from my phone.")
+       "Automations that run overnight with no one present: they fetch listings, score them against a fixed profile with an LLM, check eligibility (reading the full job description when the posting is on Greenhouse or Lever), and fold duplicates through a small Rust service. Everything lands in one Postgres table on Supabase."
+       "A Next.js web app is the only thing I touch. It reads that table, lets me triage quickly, tracks each role through a pipeline, searches for people at the company and drafts outreach text. A Telegram bot with an AI agent answers questions about the table.")
       ("Two rules that shape it"
        "The automations write, the app updates a few columns, and nothing is ever deleted: a dismissed role stays in the table so the next night's sweep doesn't add it back."
-       "The LinkedIn part stays manual. The app prepares text and tracks threads, but never sends a message or opens a LinkedIn page, because automating LinkedIn gets accounts restricted.")
+       "The LinkedIn part stays manual. The app prepares text and tracks threads, but never sends a message, never connects and never fetches a LinkedIn page, because automating LinkedIn gets accounts restricted.")
       ("Stack"
        "Self-hosted n8n in Docker on a Google Cloud VM behind Caddy, a Rust dedup service, Groq for the LLM, Supabase (Postgres, auth, row-level security) and Next.js on Vercel.")))
     (:name "Cut the Line — 1st of 120"
