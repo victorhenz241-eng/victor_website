@@ -410,6 +410,129 @@ same. Then run `wc -c public/*.html` and check every footer.
 
 ---
 
+## Effect 11: diagrams that Lisp draws and CSS animates
+
+**In plain words:** each case study has a picture (the Internship Radar architecture,
+the Event-Market Graph schema). Nobody drew it in a design tool. It's a `:diagram`
+plist in `content.lisp`, and a Lisp function turns it into SVG. Add a box to the
+data, rebuild, and the picture has one more box. Then the arrows draw themselves,
+and either small dots travel along the pipeline or an example "agent walk" lights
+up box after box.
+
+### Step 1: SVG is just more tags
+
+SVG is HTML's cousin for drawings. A box is `<rect x y width height>`, a label is
+`<text x y>`, a line is `<path d="...">`. So `html.lisp` can write it like any
+other tag: `(:rect :x 8 :y 8 :width 140 :height 54 :rx 8)`.
+
+One catch: SVG comes from XML, where **case matters**. `viewBox` and `viewbox` are
+different names. The Lisp reader upcases every symbol (`:viewBox` is read as
+`:VIEWBOX`), and our renderer lowercases names, so the capital B is lost. Browsers
+repair the common ones when they read HTML, but we write them right anyway:
+`*mixed-case-names*` in `html.lisp` lists the SVG names with capitals, and
+`markup-name` puts the capitals back. Try `(markup-name :viewbox)` in the REPL.
+
+### Step 2: the data, then the geometry
+
+```lisp
+:nodes ((sweep :at (1 0) :label "Sweep" :note "n8n · daily 02:00") ...)
+:edges ((sweep -> db "insert") (dedup <-> rust "all rows") ...)
+```
+
+- `:at (column row)` puts a box on a grid. `diagram-svg` (in `pages.lisp`) turns
+  grid positions into SVG units with the numbers in `*diagram-sizes*`.
+- `->` and `<->` are ordinary symbols. Lisp doesn't give them any meaning; we chose
+  them because `(a -> b)` reads like an arrow. The code just checks `(eq arrow '<->)`.
+- The geometry thinks in two directions, **main** (along the flow) and **cross**
+  (across it), not x and y. That's why one function draws both pictures: the wide
+  one flows left to right, the phone one flows top to bottom. Only the last step,
+  `xy`, decides which direction is x.
+- Each arrow is a **cubic Bezier curve**: `M start C control1, control2, end`. The
+  curve starts and ends on the boxes and is pulled towards the two control points.
+  Putting both control points halfway along the flow gives the soft S shape.
+  `bezier-point` computes a point on the curve, which is where a label goes.
+- An arrow longer than one step first runs straight along its lane (`L`), then bends
+  in the last gap, so it never cuts through the boxes in between.
+
+The text version under the picture (`diagram-text`) is generated from the same
+data, so it can never disagree with the picture. Screen readers get it instead of
+the SVG (`role="img"` plus a `<title>` and `<desc>`).
+
+### Step 3: a line that draws itself (`stroke-dashoffset`)
+
+Every SVG line can be dashed: `stroke-dasharray: 1 1` means "1 unit of line, 1 unit
+of gap". `pathLength="1"` (written by Lisp) tells the browser to treat the whole
+path as 1 unit long, whatever its real length. So the pattern is: the whole line,
+then a gap as long as the line.
+
+`stroke-dashoffset` slides that pattern along the path. At `1` the gap covers the
+path: invisible. At `0` the line covers it: fully drawn. Animate from 1 to 0 and the
+line seems to draw itself from its start:
+
+```css
+.js .diagram .edge-line          { stroke-dasharray: 1 1; stroke-dashoffset: 1; }
+.js .diagram.is-drawn .edge-line { stroke-dashoffset: 0;
+                                   transition: stroke-dashoffset 0.8s var(--ease)
+                                               calc(300ms + var(--i) * 110ms); }
+```
+
+`--i` is the arrow's place in the data, so the arrows draw in the order you wrote
+them. That's why the edges list is written in flow order.
+The walk uses the same trick on a second, thicker line laid over the arrow.
+Each label sits on a small rect in the page color, which hides whatever line runs
+under it, the walk's line included. So the label of an arrow the walk follows gets
+the same `data-walk` step and lights up in ink with it: the path still reads as
+one unbroken line.
+
+### Step 4: motion along a path
+
+`<animateMotion>` is SVG's own animation element: it moves its parent (a small
+`<circle>`) along a path. `<mpath href="#edge-id">` points it at an arrow, so the
+dot follows the exact curve Lisp computed.
+
+- All the dots share one cycle. `keyTimes="0;0.041;0.288;1"` with `keyPoints="0;0;1;1"`
+  means: wait at the start until 4% of the cycle, travel until 29%, then stay at the
+  end. Each dot gets its own slice, so together they look like one parcel going box
+  to box (`:pulse` in the data lists the boxes).
+- `begin="indefinite"`: nothing moves until `motion.js` calls `beginElement()`,
+  once the arrows are drawn. Without JS, or with reduced motion, they never start.
+- `svg.pauseAnimations()` and `svg.unpauseAnimations()` freeze and resume every SVG
+  animation in that `<svg>`. The Pause button uses them, and so does an
+  IntersectionObserver that pauses the diagram while it's off screen.
+
+(CSS `offset-path` can do the same job on HTML elements. Inside an SVG,
+`<animateMotion>` is the simpler tool: it uses the path's own coordinates.)
+
+### Step 5: the rules
+
+- **More than 5 seconds of motion needs a pause control** (WCAG 2.2.2): the Pause
+  button appears only once something loops, like the terminal's.
+- **Reduced motion:** the picture is complete and still. No drawing, no dots, no walk.
+- **No JS:** the `.js` class never appears, so nothing is hidden: complete and still.
+- **Contrast:** lines and borders use `--muted`, at least 3:1 against the page in
+  both themes. Colors come from the CSS tokens, so dark mode needs no extra work.
+
+**Try it:** add a box to the Radar diagram, say
+`(caddy :at (0 3) :label "Caddy" :note "HTTPS proxy")`, and an arrow
+`(caddy -> bot "webhook")`. Rebuild. The wide picture, the phone picture and the text
+version all change. Then swap two arrows in `:edges` and watch the drawing order change.
+
+---
+
+## Effect 12: the demo video slot
+
+**In plain words:** if `static/event-market.mp4` exists when the site builds, the
+Event-Market page shows it under the header. If it doesn't, the page has no video
+and nothing breaks. `PROBE-FILE` returns the file's path if it exists and `NIL` if
+not, so a `WHEN` around it does the job (`demo-video` in `pages.lisp`).
+
+`mp4-size` reads the video's width and height straight from the file, so the
+`<video>` gets `width`/`height` and the page reserves its space before it loads.
+`motion.js` swaps the browser's controls for a small Pause button, and under reduced
+motion it cancels the autoplay. How to record and compress the video: see README.
+
+---
+
 ## The rule that applies to every effect: reduced motion
 
 Some people get dizzy from animations and turn on "Reduce motion" in their OS.

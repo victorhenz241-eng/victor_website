@@ -307,9 +307,10 @@ readers (.sr-only). HEADING is a list of nodes, like *HEADLINE*."
           ((string= id "contact")   (panel "Contact" '((*links*) (*contact-line*)))))))
 
 (defun case-study-sources (project)
-  "For a project page: (values hero-panel part-panels). The hero shows the start of
-the project's plist in *projects*, up to its :sections; each numbered part shows
-its own (heading paragraph ...) list from :sections."
+  "For a project page: (values hero-panel part-panels diagram-panel). The hero
+shows the start of the project's plist in *projects*, up to its :sections; each
+numbered part shows its own (heading paragraph ...) list from :sections; the
+diagram's part shows its :diagram data (see DIAGRAM-SOURCE)."
   (let* ((text (source-text "content.lisp"))
          (param (find-slice (form-slices text 0) (headed-by 'defparameter '*projects*)))
          ;; The 3rd element of (defparameter *projects* '(...) "doc") is the list.
@@ -325,11 +326,27 @@ its own (heading paragraph ...) list from :sections."
                                 (second plist) (third (nth (1- key) fields)) :role "data")
                          (pages-chunk (headed-by 'mapc)))
                    :heading (list (getf project :name)))
+     ;; Each part is named by its heading, the first string of its list.
      (loop for part in (elements text sections)
-           for n from 1
-           collect (source-panel (format nil "Lisp source of part ~d" n)
+           collect (source-panel (format nil "Lisp source of the part “~a”" (first (first part)))
                                  (list (chunk "src/content.lisp" text
-                                              (second part) (third part) :role "data")))))))
+                                              (second part) (third part) :role "data"))))
+     (diagram-source text fields))))
+
+(defun diagram-source (text fields)
+  "The source panel of a project's diagram, or NIL if it has none: the :diagram
+data in content.lisp, comments above it included, then the function that draws it."
+  (let ((key (position :diagram fields :key #'first)))
+    (when key
+      ;; The comment above :diagram sits between the previous value and the key.
+      ;; It starts at the first character after that value that isn't a blank.
+      (let ((start (position-if-not (lambda (c) (member c '(#\Space #\Tab #\Newline)))
+                                    text :start (third (nth (1- key) fields))))
+            (value (nth (1+ key) fields)))
+        (source-panel "Lisp source of the diagram"
+                      (list (chunk "src/content.lisp" text start (third value) :role "data")
+                            (pages-chunk (headed-by 'defun 'diagram-svg)))
+                      :scroll t)))))
 
 (defun with-source (panel &rest content)
   "Wrap CONTENT so source-view.js can swap it with PANEL. The panel goes in a

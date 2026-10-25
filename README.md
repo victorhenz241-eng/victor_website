@@ -20,7 +20,7 @@ victor-site/
 │   └── build.lisp         # writes everything into public/
 ├── static/
 │   ├── style.css          # all the design + motion
-│   ├── motion.js          # scroll reveal, typing terminal, header + nav state
+│   ├── motion.js          # scroll reveal, terminal, header + nav state, diagrams, demo video
 │   ├── command-menu.js    # the ⌘K menu
 │   └── source-view.js     # the "(λ) source" switch
 ├── .claude/settings.json  # puts Claude Code in "Learning" mode for this project
@@ -92,6 +92,38 @@ Nothing needs restarting. Things to try:
 3. At your registrar, add the DNS records GitHub shows under *Settings → Pages → Custom domain*.
 4. Tick **Enforce HTTPS** once it's available.
 
+## 7. Add the demo video (Event-Market Graph page)
+
+The Event-Market page shows a short, silent screen recording under its header,
+but only once `static/event-market.mp4` exists. Until then the page has no video
+(see `:video` in `content.lisp` and LEARN.md, Effect 12).
+
+1. **Record.** Open the live demo, press **⌘⇧5**, choose *Record Selected Portion*,
+   frame the browser window and record 15–20 seconds of one agent run. Stop it from
+   the menu bar. macOS saves a `.mov` on the Desktop with the date in its name;
+   rename it `recording.mov`.
+2. **Convert** to a small, silent H.264 mp4 (install ffmpeg with `brew install ffmpeg`):
+
+   ```sh
+   ffmpeg -i ~/Desktop/recording.mov -t 20 -an \
+     -vf "fps=30,scale=1280:-2" -c:v libx264 -profile:v high -pix_fmt yuv420p \
+     -preset slow -crf 28 -movflags +faststart static/event-market.mp4
+   ```
+
+   `-an` drops the sound, `scale=1280:-2` makes it 1280 px wide (the height follows,
+   rounded to an even number), `-crf 28` sets the quality (higher = smaller),
+   `yuv420p` makes it play everywhere, `+faststart` lets it start before it has fully
+   downloaded. Check the size with `ls -lh static/event-market.mp4`: aim for 3 MB or
+   less. Too big? Try `-crf 32`, a shorter `-t`, or `scale=960:-2`.
+3. **Poster (optional):** the image shown before the video plays.
+
+   ```sh
+   ffmpeg -i static/event-market.mp4 -frames:v 1 -q:v 3 static/event-market-poster.jpg
+   ```
+
+4. **Rebuild** (`sbcl --script make.lisp`). The build reads the video's width and
+   height from the file. Delete the file and rebuild to remove the video again.
+
 ## Next steps
 
 **Content:** every sentence in `content.lisp` comes from the CV. Review the About
@@ -108,4 +140,6 @@ when you want the CV link to appear. Keep `*repl*` factual and to four commands.
 - [x] Highlight the current section in the nav.
 - [x] A ⌘K command menu generated from the data.
 - [x] A "(λ) source" switch that shows the real Lisp behind each section.
+- [x] Diagrams generated from data on the project pages, drawing themselves (LEARN.md, Effect 11).
+- [ ] Record the Event-Market demo video (section 7).
 - [ ] Add a second animated "mockup": a small chart that draws itself would suit a data person.
