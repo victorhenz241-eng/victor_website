@@ -53,6 +53,17 @@ to see what this macro actually writes for you."
 (defparameter *font-url*
   "https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Literata:ital,wght@0,400;0,500;1,400&display=swap")
 
+(defparameter *home-sections*
+  '(("about" "About")
+    ("work" "Work" "experience")   ; an optional 3rd item: extra search words
+    ("projects" "Projects")
+    ("education" "Education")
+    ;; Keep Contact last: on phones the CSS hides every nav link but the last one.
+    ("contact" "Contact"))
+  "(id label [search-words]) for each section of the home page. Two things are built from this
+one list: the links in the header and the \"Pages\" group of the command menu.
+The ids must match the SECTION calls in the index.html page below.")
+
 (defun site-header (home)
   ;; HOME is the address of the home page: "./" on normal pages.
   `(:header :class "site-header"
@@ -60,13 +71,124 @@ to see what this macro actually writes for you."
       ;; "./#about" instead of "#about": from a project page, "#about" would look
       ;; for an #about on *that* page. "./" always means the home page.
       (:a :class "wordmark" :href ,home ,*name*)
-      (:nav
-       (:a :href ,(format nil "~a#about" home) "About")
-       (:a :href ,(format nil "~a#work" home) "Work")
-       (:a :href ,(format nil "~a#projects" home) "Projects")
-       (:a :href ,(format nil "~a#education" home) "Education")
-       ;; Keep Contact last: on phones the CSS hides every link but the last one.
-       (:a :href ,(format nil "~a#contact" home) "Contact")))))
+      (:div :class "header-end"
+       ;; aria-label names this nav for screen readers, which list every landmark.
+       (:nav :aria-label "Sections"
+        ,@(loop for (id label) in *home-sections*
+                collect `(:a :href ,(format nil "~a#~a" home id) ,label)))
+       ,(command-button)))))
+
+;;; ------------------------------------------------------------------
+;;; The command menu (press ⌘K or Ctrl+K, or click "Search" in the header)
+;;;
+;;; Lisp writes every entry into the HTML at build time, from the same data as the
+;;; rest of the site: add a project to content.lisp and it gets a command too.
+;;; static/command-menu.js only opens the menu, filters it and moves the selection.
+;;; ------------------------------------------------------------------
+
+(defun command-button ()
+  ;; `hidden` until command-menu.js removes it: without JavaScript the button
+  ;; would do nothing, so it's better not to show it at all.
+  ;; aria-keyshortcuts tells screen readers about the shortcut; the <kbd> chip
+  ;; shows it to everyone else, so it's aria-hidden to avoid saying it twice.
+  `(:button :type "button" :class "cmdk-button" :hidden t
+            :aria-haspopup "dialog" :aria-controls "cmdk"
+            :aria-keyshortcuts "Meta+K Control+K /"
+            :data-cmdk-open t
+     (:span :class "cmdk-button-text" "Search")
+     (:kbd :aria-hidden "true" :data-cmdk-key t "⌘K")))
+
+(defun link-hint (url)
+  "A short, readable version of URL, shown in grey next to a command:
+\"https://www.linkedin.com/in/x\" -> \"linkedin.com\", \"mailto:me@x.com\" -> \"me@x.com\".
+Anything else (a relative link like \"cv.pdf\") is returned as it is."
+  (let ((slashes (search "//" url)))
+    (cond ((uiop:string-prefix-p "mailto:" url) (subseq url (length "mailto:")))
+          (slashes
+           ;; LET* (with a star) lets each variable use the ones defined above it.
+           (let* ((start (+ slashes 2))
+                  (start (if (uiop:string-prefix-p "www." (subseq url start))
+                             (+ start 4)
+                             start)))
+             ;; POSITION returns NIL when there's no "/" after the host,
+             ;; and (subseq url start nil) means "up to the end".
+             (subseq url start (position #\/ url :start start))))
+          (t url))))
+
+(defun commands (home)
+  "Every entry of the command menu, as a list of plists. HOME plays the same role
+as in SITE-HEADER, so the links work from the home page, a project page and the 404."
+  (append
+   (list `(:group "Pages" :label "Home" :href ,home :hint "top"))
+   ;; A missing 3rd item just makes WORDS NIL.
+   (loop for (id label words) in *home-sections*
+         collect `(:group "Pages" :label ,label :keywords ,(when words (list words))
+                   :href ,(format nil "~a#~a" home id) :hint ,(format nil "#~a" id)))
+   ;; LOOP can name a value with FOR ... = and then test it with WHEN.
+   (loop for project in *projects*
+         for slug = (getf project :slug)
+         when slug
+           collect `(:group "Pages" :label ,(getf project :name)
+                     :href ,(format nil "~a~a" home (case-study-path slug))
+                     :hint "case study" :keywords ,(getf project :tags)))
+   (loop for project in *projects*
+         for url = (getf project :url)
+         when url
+           collect `(:group "Projects" :label ,(getf project :name)
+                     :href ,url :hint ,(link-hint url) :keywords ,(getf project :tags)))
+   (loop for (label url) in *links*
+         when url
+           collect `(:group "Links" :label ,label
+                     :href ,url :hint ,(link-hint url)))))
+
+(defun command-menu (home)
+  "The <dialog> holding the command menu. It follows the ARIA \"combobox\" pattern:
+a text box that controls a list box of options, grouped under small mono labels."
+  (let ((commands (commands home))
+        (n -1))                         ; counts options, so each gets a unique id
+    `(:dialog :id "cmdk" :class "cmdk" :aria-label "Command menu"
+       (:div :class "cmdk-panel"
+        (:div :class "cmdk-search"
+         ;; autofocus: when the dialog opens, the cursor lands in this box.
+         (:input :type "text" :class "cmdk-input" :role "combobox"
+                 :aria-label "Search pages, projects and links"
+                 :placeholder "Jump to a page, project or link…"
+                 :aria-expanded "true" :aria-controls "cmdk-list" :aria-autocomplete "list"
+                 :autocomplete "off" :spellcheck "false" :autofocus t)
+         (:kbd :class "cmdk-esc" :aria-hidden "true" "esc"))
+        (:div :id "cmdk-list" :class "cmdk-list" :role "listbox" :aria-label "Results"
+         ,@(loop for group in '("Pages" "Projects" "Links")
+                 ;; REMOVE-IF-NOT keeps the commands of this group only.
+                 for items = (remove-if-not (lambda (c) (equal (getf c :group) group)) commands)
+                 when items
+                   collect
+                   `(:div :class "cmdk-group" :role "group" :aria-label ,group
+                      (:div :class "cmdk-group-label" :aria-hidden "true" ,group)
+                      ,@(loop for item in items
+                              collect
+                              (destructuring-bind (&key label href hint keywords
+                                                   &allow-other-keys) item
+                                ;; tabindex -1: options are reached with the arrow
+                                ;; keys, not Tab. The focus stays in the text box.
+                                `(:a :class "cmdk-item" :role "option" :href ,href
+                                     :id ,(format nil "cmdk-~d" (incf n))
+                                     :tabindex "-1" :aria-selected "false"
+                                     ;; ~{~a~^ ~} joins a list with spaces.
+                                     :data-keywords ,(when keywords
+                                                       (format nil "~{~a~^ ~}" keywords))
+                                   (:span :class "cmdk-label" ,label
+                                          ;; ↗ marks links that leave the site.
+                                          ,(when (uiop:string-prefix-p "http" href)
+                                             '(:span :class "arrow" " ↗")))
+                                   (:span :class "cmdk-hint" ,hint)))))))
+        ;; Outside the list box on purpose: a listbox may only contain options.
+        (:p :class "cmdk-empty" :hidden t "No matches.")
+        ;; A live region: screen readers announce its text whenever it changes.
+        (:p :class "sr-only" :aria-live "polite" :data-cmdk-status t)
+        (:p :class "cmdk-footer" :aria-hidden "true"
+         (:span (:kbd "↑") (:kbd "↓") " move")
+         (:span (:kbd "↵") " open")
+         (:span (:kbd "esc") " close"))))))
 
 (defun layout (&key title description base body)
   "The HTML shared by every page. BASE is NIL for normal pages, which keeps every
@@ -85,14 +207,17 @@ link relative (\"style.css\"), so the site works at any address. Given a BASE li
       ;; ~@[...~] in FORMAT prints its contents only when the argument isn't NIL.
       (:link :rel "stylesheet" :href ,(format nil "~@[~a~]style.css" base))
       ;; defer = download now, run after the HTML is parsed.
-      (:script :src ,(format nil "~@[~a~]motion.js" base) :defer t))
+      (:script :src ,(format nil "~@[~a~]motion.js" base) :defer t)
+      (:script :src ,(format nil "~@[~a~]command-menu.js" base) :defer t))
      (:body :id "top"
       ,(site-header (or base "./"))
       (:main :class "page" ,@body)
       (:footer :class "page footer"
        (:span "© " ,*name*)
        (:span "Built with " (:a :href "https://lisp-lang.org" "Common Lisp")
-              " and a little CSS")))))
+              " and a little CSS"))
+      ;; The dialog sits outside <main>: it's closed (invisible) until opened.
+      ,(command-menu (or base "./")))))
 
 ;;; ------------------------------------------------------------------
 ;;; Building blocks

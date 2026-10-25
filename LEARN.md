@@ -111,11 +111,115 @@ scrolls underneath it.
 
 ---
 
+## Effect 6: the header shrinks when you scroll
+
+**In plain words:** at the top of the page the header blends into the page. Once you
+scroll a little, it gets 8px shorter, the name shrinks slightly, and a thin line
+appears under it, so it reads as a bar sitting on top of the content.
+
+**Step by step:**
+
+1. **JS needs one fact:** "is the top of the page still on screen?". `motion.js`
+   (section 3) adds an invisible 6rem-tall `<div class="scroll-sentinel">` at the very
+   top of the page and watches it with an **IntersectionObserver**, the same tool as
+   Effect 1. When the sentinel leaves the screen, the header gets the class `is-scrolled`.
+   When it comes back, the class goes away.
+2. **CSS does the look** (`style.css`, section 3):
+   ```css
+   .site-header.is-scrolled               { transform: translateY(-0.5rem); }
+   .site-header.is-scrolled .header-inner { transform: translateY(0.25rem); }
+   ```
+   The header slides up 8px (its top goes off screen) and its content slides down 4px,
+   so it *looks* 8px shorter with everything still centred.
+
+**Why not listen to `scroll`?** That works too, but the `scroll` event fires up to 60
+times a second, and you'd have to throttle it with `requestAnimationFrame`. The
+observer only calls you when the answer changes: once on the way down, once on the way up.
+
+**Why not change `height`?** The header is part of the page flow, so a shorter header
+would pull the whole page up by 8px while you're reading. Moving it with `transform`
+changes nothing around it, and it's cheap to animate (see Effect 2).
+
+**Try it:** make the sentinel `height: 30rem` so the header changes later, or remove
+`.header-inner`'s transform and watch the content stop being centred.
+
+---
+
+## Effect 7: the nav shows where you are
+
+**In plain words:** on the home page, the nav link of the section you're reading turns
+dark and gets a thin line under it that grows from the left.
+
+1. **Which links?** `motion.js` (section 4) takes each nav link, reads its `#about`
+   part, and keeps it only if *this* page has an element with that id. So on a project
+   page or the 404 nothing gets highlighted. We considered lighting up "Projects" on
+   project pages, but that link goes to the home page, not to the page you're on, so
+   it would be slightly misleading. The "← All work" link already tells you where you are.
+2. **Which section is "current"?** An IntersectionObserver with
+   `rootMargin: "-35% 0px -60% 0px"`. A negative margin *shrinks* the area being watched,
+   here to a thin band about a third of the way down the screen, which is roughly where
+   you're reading. The last section crossing that band wins.
+3. **The end of the page:** Contact is short, so it might never reach the band. A second
+   observer watches the footer: once it's on screen, Contact wins.
+4. **Marking it:** JS sets `aria-current="true"` on the link. Screen readers announce
+   it ("current"), and the CSS uses the same attribute for the look:
+   ```css
+   .site-header nav a[aria-current="true"]::after { transform: scaleX(1); }
+   ```
+   One attribute does both jobs, so the look and what screen readers say never disagree.
+
+The line is a `::after` squashed to `scaleX(0)`, the same trick as the timeline in Effect 2,
+turned sideways.
+
+---
+
+## Effect 8: the ⌘K command menu
+
+**In plain words:** press ⌘K (Ctrl+K on Windows), or `/`, or click "Search" in the
+header. A small window opens. Type to filter, use ↑ ↓ to choose, Enter to go, Esc to close.
+
+**Lisp writes the whole menu.** `command-menu` in `pages.lisp` builds a `<dialog>` with
+every entry already inside: the home sections (from `*home-sections*`, the same list
+the header uses), one entry per project page (`:slug`), one per project with a `:url`,
+and your `*links*`. So adding a project to `content.lisp` adds it to the menu, with
+no JS change. `commands` takes `home` like `site-header` does, which is why the links
+work from a project page (`./#about`) and from the 404 page (`/victor_website/#about`).
+
+**The browser does the hard parts.** `<dialog>` opened with `showModal()`:
+- keeps the Tab key inside the dialog (a "focus trap"),
+- closes on Esc,
+- dims the page behind it (the `::backdrop`),
+- and puts the focus back where it was when it closes.
+
+**JS does the rest** (`static/command-menu.js`):
+- **Filtering:** each word you type must appear in the entry's text, hint, group name or
+  tags. Everything is lowercased and accents are removed, so `supelec` finds `Supélec`.
+- **The selection:** the focus never leaves the text box. Instead, `aria-activedescendant`
+  on the text box holds the `id` of the selected option, and screen readers read that
+  option out. This is the ARIA *combobox* pattern: a text box that controls a *listbox*.
+- **Clicking outside:** the panel fills the whole dialog, so a click whose target is the
+  dialog itself must have landed on the backdrop.
+
+**Progressive enhancement again:** the "Search" button has the `hidden` attribute in the
+HTML, and JS removes it. Without JS you never see a button that does nothing.
+
+**The opening animation** is a `@keyframes` (fade + scale from 98%), not a transition:
+the dialog jumps from `display: none` to visible, so a transition has no starting value.
+
+**Try it:** add a fake project with a `:url` to `*projects*`, rebuild, press ⌘K and
+search for it. Then remove it.
+
+---
+
 ## The rule that applies to every effect: reduced motion
 
 Some people get dizzy from animations and turn on "Reduce motion" in their OS.
 `@media (prefers-reduced-motion: reduce)` in the CSS and `reduceMotion` in the JS
 turn every effect off for them. Keep this in place as you add effects.
+
+Turning motion off doesn't mean turning features off: with reduced motion the header
+still shrinks, the nav still highlights and the menu still opens. They just change
+instantly instead of animating.
 
 ## Design notes: why it looks the way it does
 
@@ -134,6 +238,6 @@ turn every effect off for them. Keep this in place as you add effects.
 - *Practical Common Lisp* (free online), especially chapters 3 (a small database, a
   lot like `content.lisp`), 8 (macros) and 31 (an HTML generator, a bigger version of
   `html.lisp`).
-- Exercises, in order: (1) make the header shrink when you scroll, (2) highlight the
-  current section in the nav, (3) add one more animated "mockup" like the terminal.
-  A small chart that draws itself would fit a data person well.
+- Exercises: the shrinking header and the nav highlight now exist (Effects 6 and 7),
+  so read them and change a number or two. Next: add one more animated "mockup" like
+  the terminal. A small chart that draws itself would fit a data person well.
