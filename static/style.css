@@ -813,7 +813,7 @@ kbd {
  *
  * The SVG comes from Lisp (DIAGRAM-SVG in pages.lisp). Its colors come from here,
  * through the same tokens as the rest of the page, so dark mode just works.
- * Contrast: lines and box borders use --muted (about 5.9:1 on the light page,
+ * Contrast: lines and box borders use --muted (about 5.7:1 on the light page,
  * 7:1 on the dark one; shapes need 3:1), text uses --text and --muted (4.5:1+).
  *
  * The motion, in three steps (motion.js starts each one):
@@ -865,6 +865,10 @@ kbd {
 .walk-line.is-lit { stroke-dashoffset: 0; }
 .node rect { transition: stroke 0.3s, stroke-width 0.3s, fill 0.3s; }
 .node.is-lit rect { stroke: var(--text); stroke-width: 2; fill: var(--bg); }
+/* A label's rect hides the walk line under it, so the label lights up too:
+   the path then reads as one ink line, label included. */
+.edge-label text { transition: fill 0.3s; }
+.edge-label.is-lit text { fill: var(--text); font-weight: 500; }
 
 /* Step 1, drawing. pathLength="1" (set in Lisp) makes every arrow 1 unit long,
    whatever its real length. A dash pattern of "1 on, 1 off" shifted by 1

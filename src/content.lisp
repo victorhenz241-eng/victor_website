@@ -150,7 +150,7 @@ animation stays short.")
               (event -> day "ON_DAY")
               (event -> theme "HAS_THEME" :label-at 0.25)
               (event -> country "OCCURRED_IN" :label-at 0.25)
-              (theme -> series "CORRELATES_WITH")
+              (theme -> series "CORRELATES_WITH" :label-at 0.4)
               (claim -> series "ABOUT_SERIES" :label-at 0.3)
               (claim -> event "ABOUT_EVENT" :label-at 0.3))
       ;; An example walk, lit up one step at a time like the agent in the frontend.

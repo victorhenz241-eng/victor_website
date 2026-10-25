@@ -100,11 +100,12 @@ but only once `static/event-market.mp4` exists. Until then the page has no video
 
 1. **Record.** Open the live demo, press **⌘⇧5**, choose *Record Selected Portion*,
    frame the browser window and record 15–20 seconds of one agent run. Stop it from
-   the menu bar. macOS saves a `.mov` on the Desktop.
+   the menu bar. macOS saves a `.mov` on the Desktop with the date in its name;
+   rename it `recording.mov`.
 2. **Convert** to a small, silent H.264 mp4 (install ffmpeg with `brew install ffmpeg`):
 
    ```sh
-   ffmpeg -i ~/Desktop/"Screen Recording.mov" -t 20 -an \
+   ffmpeg -i ~/Desktop/recording.mov -t 20 -an \
      -vf "fps=30,scale=1280:-2" -c:v libx264 -profile:v high -pix_fmt yuv420p \
      -preset slow -crf 28 -movflags +faststart static/event-market.mp4
    ```

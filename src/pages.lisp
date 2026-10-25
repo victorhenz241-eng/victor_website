@@ -521,6 +521,14 @@ the same code draw the phone version: it just maps MAIN to y instead of x."
                         collect
                         (let* ((points (route from to))
                                (at (getf options :label-at))
+                               ;; The walk step that goes along this arrow (either
+                               ;; way), if any: its label lights up with that step,
+                               ;; since the label's rect hides the walk's line.
+                               (walk-step (loop for (a b) on walk-ids
+                                                for n from 1
+                                                when (or (and (eq a from) (eq b to))
+                                                         (and (eq a to) (eq b from)))
+                                                  return n))
                                (point (if (and (= (length points) 5) (not at))
                                           ;; half a gap from the start, towards the 2nd point
                                           (destructuring-bind ((m c) (m2 c2) &rest curve) points
@@ -533,6 +541,7 @@ the same code draw the phone version: it just maps MAIN to y instead of x."
                           (destructuring-bind (x y) (xy point)
                             (let ((half (+ 4 (* 3.25 (length label)))))
                               `(:g :class "edge-label" :style ,(stagger i)
+                                   :data-walk ,walk-step
                                  (:rect :x ,(num (- x half)) :y ,(num (- y 8))
                                         :width ,(num (* 2 half)) :height 16 :rx 3)
                                  (:text :x ,(num x) :y ,(num (+ y 3.5)) ,label)))))))

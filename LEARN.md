@@ -479,6 +479,10 @@ line seems to draw itself from its start:
 `--i` is the arrow's place in the data, so the arrows draw in the order you wrote
 them. That's why the edges list is written in flow order.
 The walk uses the same trick on a second, thicker line laid over the arrow.
+Each label sits on a small rect in the page color, which hides whatever line runs
+under it, the walk's line included. So the label of an arrow the walk follows gets
+the same `data-walk` step and lights up in ink with it: the path still reads as
+one unbroken line.
 
 ### Step 4: motion along a path
 
