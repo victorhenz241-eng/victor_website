@@ -30,9 +30,9 @@ the italic part gets its own <em> tag. Lisp data and HTML are the same thing her
   "Also used as the page's meta description, the snippet search engines show.")
 
 (defparameter *about*
-  '("At Canal+ I built internal AI applications that let leadership and editorial teams query company data in natural language, so people get numbers instead of tickets."
+  '("At Canal+ I built internal AI applications that let leadership and editorial teams query company data and assemble content selections in natural language."
     ;; DRAFT — Victor to review: written from CV facts only
-    "I like taking a project from end to end and getting it into people's hands. I co-founded Parsed, an AI news app that reached 2,000+ users. Since then I've shipped AI tools at Canal+, won a hackathon with a phone-scam detector, and built a training app for the ESSEC Football Club. Next I want to do that work in applied AI or data science.")
+    "I like taking a project from end to end and getting it into people's hands. That started with Parsed, the AI news app I co-founded, where I built the personalization engine and a political-bias detector. Away from the keyboard I run middle distance: I've represented Luxembourg in the 1500m at the European Youth Olympic Festival.")
   "Each string becomes one paragraph.")
 
 (defparameter *links*
@@ -67,7 +67,7 @@ Four in/out pairs at most, so the animation stays short.")
      :org "Parsed"
      :place "Luxembourg"
      :dates "Jan 2025 · 6 months"
-     :summary "Co-founded and launched an AI news app on the App Store, personalized to each user's profession and location. Built the personalization engine and a political-bias detector. Grew it to 2,000+ users and coverage in the Luxembourg press."))
+     :summary "Co-founded and launched an AI news app on the App Store, personalized to each user's profession and location. Built the personalization engine and a political-bias detector. Grew it to 2,000+ users, with coverage in the Luxembourg press."))
   "Newest first. Add as many plists as you want.")
 
 (defparameter *education*
@@ -135,7 +135,7 @@ Four in/out pairs at most, so the animation stays short.")
        "Self-hosted n8n in Docker on a Google Cloud VM behind Caddy, a Rust dedup service, Groq for the LLM, Supabase (Postgres, auth, row-level security) and Next.js on Vercel.")))
     (:name "EFC Tracker"
      :url nil                           ; private repo
-     :summary "A personal project, built and deployed: a progressive web app for the ESSEC Football Club's 9-week conditioning program, with iOS push reminders. Now being extended to the whole club."
+     :summary "Built and deployed a progressive web app for the ESSEC Football Club's 9-week conditioning program, with iOS push reminders. Now extending it to the whole club."
      :tags ("Next.js" "TypeScript" "Redis" "PWA"))
     (:name "This website"
      :url nil                           ; TODO: the victor_website repo is private — link it once public
