@@ -776,6 +776,18 @@ kbd {
   font: inherit;
   color: var(--text);
 }
+/* One <span> per line of code (CODE-LINE in source.lisp). --n is how many spaces
+   the line starts with. A "hanging indent": the whole line is pushed right by
+   n + 2 characters (padding), then its first line is pulled back left by the same
+   amount (a negative text-indent). So the line starts where it should, and if it
+   is too long and wraps, the wrapped part sits 2 characters deeper than its start
+   instead of back at the left edge. 1ch = the width of one character of the font. */
+.source code > span {
+  display: block;
+  padding-left: calc((var(--n, 0) + 2) * 1ch);
+  text-indent: calc((var(--n, 0) + 2) * -1ch);
+}
+
 /* Long data (all the projects) scrolls inside a fixed height. A fade at the bottom
    says "there's more"; it's a mask, so it works on any background. */
 .source pre.source-scroll {

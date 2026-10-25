@@ -253,6 +253,41 @@ the parts that get a color."
       (flush)
       (nreverse nodes))))
 
+;;; Long lines wrap on a phone. In a <pre>, the wrapped part would restart at the
+;;; left edge, under the parens, and the shape of the code would be lost. So each
+;;; line becomes its own block <span>, which the CSS gives a "hanging indent": the
+;;; wrapped part lines up two characters further in than the line's own start.
+
+(defun split-lines (nodes)
+  "Cut the NODES that HIGHLIGHT returns into lines: a list with one list of nodes
+per line of text. A string or a colored span that runs over several lines (like a
+docstring) is cut at each newline, and every piece keeps its color."
+  (let ((lines '())
+        (line '()))
+    (dolist (node nodes)
+      ;; A node is either "plain text" or (:span :class "c-string" "text").
+      (multiple-value-bind (text class)
+          (if (stringp node) (values node nil) (values (fourth node) (third node)))
+        (loop for (piece . more) on (uiop:split-string text :separator '(#\Newline))
+              do (when (plusp (length piece))
+                   (push (if class `(:span :class ,class ,piece) piece) line))
+                 (when more              ; a newline came right after this piece
+                   (push (nreverse line) lines)
+                   (setf line '())))))
+    (push (nreverse line) lines)
+    (nreverse lines)))
+
+(defun code-line (nodes)
+  "One line of code as a <span> (style.css makes it a block). --n is how many
+spaces the line starts with; the CSS turns it into the hanging indent. An empty
+line gets one space, or its block would have no height."
+  (let* ((start (first nodes))
+         (n (if (stringp start)
+                (or (position #\Space start :test-not #'char=) (length start))
+                0)))
+    `(:span :style ,(when (plusp n) (format nil "--n:~d" n))
+       ,@(or nodes '(" ")))))
+
 ;;; ------------------------------------------------------------------
 ;;; 4. The panel
 ;;; ------------------------------------------------------------------
@@ -280,7 +315,7 @@ readers (.sr-only). HEADING is a list of nodes, like *HEADLINE*."
                          (format nil "lines ~d–~d" from to))))
                   ,(let ((long (and scroll (> (- to from) 30))))
                      `(:pre :class ,(when long "source-scroll") :tabindex ,(when long "0")
-                        (:code ,@(highlight text)))))))))
+                        (:code ,@(mapcar #'code-line (split-lines (highlight text)))))))))))
 
 ;;; ------------------------------------------------------------------
 ;;; 5. Which source goes with which part of the page
