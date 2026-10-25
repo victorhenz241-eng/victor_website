@@ -147,6 +147,9 @@ if (header && "IntersectionObserver" in window) {
   sentinel.className = "scroll-sentinel"; // 6rem tall, pinned to the top (style.css)
   sentinel.setAttribute("aria-hidden", "true");
   document.body.prepend(sentinel);
+  // Only now does the CSS hide the border at the top of the page (.tracks-scroll):
+  // if this block never runs, the header keeps its border.
+  header.classList.add("tracks-scroll");
 
   new IntersectionObserver(([entry]) => {
     // Sentinel gone from the screen = we've scrolled past the top.

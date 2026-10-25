@@ -170,7 +170,9 @@ kbd {
    slide the header up by 8px and its content down by 4px: it *looks* 8px shorter
    and the content stays centred. Only transforms, so it's cheap to animate.
    The bottom border fades in at the same time, so the header detaches from the page.
-   Without JS (no .js class) the border is simply always there. */
+   motion.js adds .tracks-scroll only once it is really watching the scroll, so
+   without JS, or in a browser without IntersectionObserver, the border simply
+   stays (rather than staying invisible forever). */
 .scroll-sentinel {
   position: absolute;              /* against the page itself: the very top */
   top: 0;
@@ -179,7 +181,7 @@ kbd {
   height: 6rem;                    /* scroll this far and the header shrinks */
   pointer-events: none;
 }
-.js .site-header:not(.is-scrolled) { border-bottom-color: transparent; }
+.site-header.tracks-scroll:not(.is-scrolled) { border-bottom-color: transparent; }
 .site-header.is-scrolled { transform: translateY(-0.5rem); }
 .site-header.is-scrolled .header-inner { transform: translateY(0.25rem); }
 .site-header.is-scrolled .wordmark { transform: scale(0.94); }
