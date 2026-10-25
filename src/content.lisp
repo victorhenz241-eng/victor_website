@@ -26,7 +26,7 @@ Only the 404 page uses this: normal pages keep relative links, which work anywhe
 the italic part gets its own <em> tag. Lisp data and HTML are the same thing here.")
 
 (defparameter *intro*
-  "AI engineering student with a 4.0 GPA. I built and shipped two AI tools used in production at Canal+, and my team took first place of 120 at the Secure Horizons 2026 hackathon. I'm looking for a Summer 2027 internship in applied AI or data science."
+  "AI engineering student with a 4.0 GPA. I built and shipped two AI tools used in production at Canal+, and won first place among 120 participants at the Secure Horizons 2026 hackathon with a 4-person team. I'm looking for a Summer 2027 internship in applied AI or data science."
   "Also used as the page's meta description, the snippet search engines show.")
 
 (defparameter *about*
@@ -48,9 +48,9 @@ the italic part gets its own <em> tag. Lisp data and HTML are the same thing her
   '((:in  "(victor:whoami)")
     (:out "(:study \"AI, Data & Management Sciences\" :at \"CentraleSupélec × ESSEC\" :gpa 4.0)")
     (:in  "(victor:shipped :at \"Canal+\")")
-    (:out "(:ai-apps 2 :used-in :production :eval \"35/36 (97%)\")")
+    (:out "(:ai-apps 2 :used-in :production :text-to-sql-eval \"35/36 (97%)\")")
     (:in  "(victor:wins)")
-    (:out "(:hackathon \"Secure Horizons 2026\" :place 1 :of 120 :prize \"€7,000\")")
+    (:out "(:hackathon \"Secure Horizons 2026\" :place 1 :participants 120 :prize \"€7,000\")")
     (:in  "(victor:next)")
     (:out "(:internship \"Summer 2027\" :fields (\"applied AI\" \"data science\") :in-dc-from \"Jan 2027\")"))
   "The animated terminal in the hero. :in lines get typed out, :out lines appear
