@@ -7,7 +7,7 @@ a few hundred lines of plain JavaScript.
 ```
 victor-site/
 ├── CLAUDE.md              # instructions Claude Code reads (teaching mode)
-├── LEARN.md               # how every animation works, explained
+├── LEARN.md               # start here: a tour of the code, then every effect explained
 ├── victor-site.asd        # project definition (which files, in which order)
 ├── make.lisp              # one-shot build: sbcl --script make.lisp
 ├── src/
@@ -22,10 +22,14 @@ victor-site/
 │   ├── style.css          # all the design + motion
 │   ├── motion.js          # scroll reveal, terminal, header + nav state, diagrams, demo video
 │   ├── command-menu.js    # the ⌘K menu
-│   └── source-view.js     # the "(λ) source" switch
+│   ├── source-view.js     # the "(λ) source" switch
+│   └── favicon.svg        # the tab icon (a λ that follows light/dark mode)
 ├── .claude/settings.json  # puts Claude Code in "Learning" mode for this project
-└── .github/workflows/     # auto-deploy to GitHub Pages
+├── .github/workflows/     # auto-deploy to GitHub Pages
+└── public/                # the built site (made by the build, not in git)
 ```
+
+Everything in `static/` is copied as is into `public/`, so everything in it is public.
 
 ## 1. Install the tools
 
@@ -77,6 +81,32 @@ Nothing needs restarting. Things to try:
 (macroexpand-1 '(defpage "x.html" (:title "X") '(:p "hi")))
 ```
 
+## Before you publish
+
+A checklist. None of these can be done by the code for you.
+
+- [ ] **Make the repo public, or upgrade.** On GitHub's free plan, Pages only works for
+      public repositories (a private one needs GitHub Pro or a paid plan). Once it's
+      public, link it from the "This website" project: its `:url` in `content.lisp`
+      is `nil` with a `private:` TODO note next to it.
+- [ ] **Tell the site where it lives.** Keep the repo name `victor_website`, or change
+      `*base-path*` in `content.lisp` to match (the 404 page depends on it). If you buy
+      a domain, set `*domain*` instead (section 6): the build then also writes
+      `CNAME`, the `canonical` link and `og:url`.
+- [ ] **Record the demo video** for the Event-Market page (section 7). Until then the
+      page simply has no video.
+- [ ] **Review the About text.** Its second paragraph is a draft written from the CV.
+      In `content.lisp` it has a `;; private: DRAFT` note above it (never shown on the
+      site). Rewrite it in your own voice, then delete the note.
+- [ ] **Add your CV, if you want the CV link.** Export a copy *without your phone
+      number*, save it as `static/cv.pdf`, and change `("CV" nil)` to
+      `("CV" "cv.pdf")` in `*links*`.
+- [ ] **Look at the live site once.** Open a page, a project page, and a made-up
+      address like `.../victor_website/a/b` (the 404 page, styled). Try ⌘K and
+      "(λ) source". Then search the built files for leftovers:
+      `grep -rn -i "todo\|draft\|private" public/*.html` should only find words
+      like "drafts" in the project text.
+
 ## 5. Put it online (GitHub Pages)
 
 1. Create a repo called `victor_website` on GitHub and push this folder to `main`.
@@ -126,9 +156,8 @@ but only once `static/event-market.mp4` exists. Until then the page has no video
 
 ## Next steps
 
-**Content:** every sentence in `content.lisp` comes from the CV. Review the About
-paragraph marked `DRAFT`, and add a `cv.pdf` without your phone number to `static/`
-when you want the CV link to appear. Keep `*repl*` factual and to four commands.
+**Content:** every sentence in `content.lisp` comes from the CV. See "Before you
+publish" above for the About draft and the CV. Keep `*repl*` factual and to four commands.
 
 **Lisp**
 - [x] Generate one page per project from `*projects*` (add a `:slug`).
@@ -143,3 +172,6 @@ when you want the CV link to appear. Keep `*repl*` factual and to four commands.
 - [x] Diagrams generated from data on the project pages, drawing themselves (LEARN.md, Effect 11).
 - [ ] Record the Event-Market demo video (section 7).
 - [ ] Add a second animated "mockup": a small chart that draws itself would suit a data person.
+
+**Learning:** LEARN.md starts with a reading order, the concepts behind each file and
+eight small exercises.

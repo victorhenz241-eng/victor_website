@@ -19,7 +19,7 @@
   --surface: #f1f1f3;
   --text: #0e1114;
   --muted: #5f646b;
-  --faint: #9aa0a6;
+  --faint: #838990;
   --line: #e4e5e8;
   --accent: #0e1114;          /* "plain": the accent is just the ink color */
 
@@ -32,6 +32,13 @@
      so even the dimmed parens stay readable. */
   --code-dim: #686d74;        /* parens, quotes, comments */
   --code-string: #2d6a3e;     /* a darker cousin of --term-green, for light pages */
+
+  /* The gray steps, and what each one may be used for (WCAG contrast rules):
+       --text, --muted  any text: at least 4.5:1 on --bg and on --surface
+       --faint          shapes that carry meaning (arrows, borders, focus lines),
+                        never text: at least 3:1 on --bg and on --surface
+       --line           decoration only: dividers, resting borders
+     The numbers for every pair are in LEARN.md ("Contrast, checked"). */
 
   --font-display: "Literata", Georgia, serif;
   --font-body: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -53,7 +60,7 @@
     --surface: #161a1e;
     --text: #e8eaed;
     --muted: #9aa0a6;
-    --faint: #5f646b;
+    --faint: #666b72;
     --line: #23282d;
     --accent: #e8eaed;
     --term-bg: #080a0c;
@@ -100,6 +107,24 @@ h1, h2, h3 { margin: 0; line-height: 1.15; font-weight: 500; }
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* "Skip to content": the first link on every page, for keyboard users. It waits
+   above the top of the screen and slides in when Tab gives it the focus. */
+.skip-link {
+  position: absolute;
+  top: var(--s1);
+  left: var(--s2);
+  z-index: 20;                     /* above the sticky header */
+  padding: 0.375rem 0.875rem;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 0.875rem;
+  text-decoration: none;
+  transform: translateY(-200%);
+  transition: transform 0.2s var(--ease);
+}
+.skip-link:focus { transform: none; }
 
 /* Small keyboard keys, e.g. the ⌘K chip and the hints in the command menu. */
 kbd {
@@ -163,7 +188,9 @@ kbd {
    slide the header up by 8px and its content down by 4px: it *looks* 8px shorter
    and the content stays centred. Only transforms, so it's cheap to animate.
    The bottom border fades in at the same time, so the header detaches from the page.
-   Without JS (no .js class) the border is simply always there. */
+   motion.js adds .tracks-scroll only once it is really watching the scroll, so
+   without JS, or in a browser without IntersectionObserver, the border simply
+   stays (rather than staying invisible forever). */
 .scroll-sentinel {
   position: absolute;              /* against the page itself: the very top */
   top: 0;
@@ -172,7 +199,7 @@ kbd {
   height: 6rem;                    /* scroll this far and the header shrinks */
   pointer-events: none;
 }
-.js .site-header:not(.is-scrolled) { border-bottom-color: transparent; }
+.site-header.tracks-scroll:not(.is-scrolled) { border-bottom-color: transparent; }
 .site-header.is-scrolled { transform: translateY(-0.5rem); }
 .site-header.is-scrolled .header-inner { transform: translateY(0.25rem); }
 .site-header.is-scrolled .wordmark { transform: scale(0.94); }
@@ -373,7 +400,7 @@ kbd {
   color: var(--muted);
   margin-bottom: var(--s4);
 }
-.label-num { color: var(--faint); }
+.label-num { color: var(--text); }     /* text, so --faint (3:1) is too light: the number gets the ink */
 
 .prose { max-width: var(--measure); }
 .prose p { margin: 0 0 var(--s2); }
@@ -767,6 +794,18 @@ kbd {
   font: inherit;
   color: var(--text);
 }
+/* One <span> per line of code (CODE-LINE in source.lisp). --n is how many spaces
+   the line starts with. A "hanging indent": the whole line is pushed right by
+   n + 2 characters (padding), then its first line is pulled back left by the same
+   amount (a negative text-indent). So the line starts where it should, and if it
+   is too long and wraps, the wrapped part sits 2 characters deeper than its start
+   instead of back at the left edge. 1ch = the width of one character of the font. */
+.source code > span {
+  display: block;
+  padding-left: calc((var(--n, 0) + 2) * 1ch);
+  text-indent: calc((var(--n, 0) + 2) * -1ch);
+}
+
 /* Long data (all the projects) scrolls inside a fixed height. A fade at the bottom
    says "there's more"; it's a mask, so it works on any background. */
 .source pre.source-scroll {

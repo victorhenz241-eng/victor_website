@@ -6,7 +6,7 @@
 //   3. The header gets more compact once you scroll down.
 //   4. The nav highlights the section you're reading.
 //   5. Diagrams (project pages): arrows draw themselves, then dots or a walk loop.
-//   6. The demo video: a Pause button, and no autoplay under reduced motion.
+//   6. The demo video: plays (muted) only with JS and without reduced motion, with a Pause button.
 // (The ⌘K command menu has its own file: command-menu.js.)
 //
 // The golden rule here is "progressive enhancement": the HTML already contains
@@ -39,10 +39,14 @@ if (reduceMotion || !("IntersectionObserver" in window)) {
         }
       }
     },
-    // threshold: how much of the element must be visible (15%).
     // rootMargin: shrink the "screen" by 10% at the bottom, so things
     // animate a little after they appear rather than right at the edge.
-    { threshold: 0.15, rootMargin: "0px 0px -10% 0px" }
+    // threshold 0: "as soon as any part of it is in that area". A bigger
+    // threshold, like 0.15 (15% of the element visible), sounds nicer but
+    // breaks on tall elements: a block 7 screens tall can never be 15% visible,
+    // so it would stay invisible forever (Chrome then never reports it as
+    // intersecting). The rootMargin already gives the "a little after" feel.
+    { threshold: 0, rootMargin: "0px 0px -10% 0px" }
   );
   document.querySelectorAll("[data-reveal]").forEach((el) => observer.observe(el));
 }
@@ -54,6 +58,26 @@ if (reduceMotion || !("IntersectionObserver" in window)) {
 // empty them all, then "type" them back one character at a time, in a loop.
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// A "gate" for the looping animations below (the terminal, the diagram walk).
+// gate(isOpen) takes a function that says whether the animation may run now.
+//   await g.pass()  continues at once if it may run, otherwise waits, without
+//                   any timer, until something calls g.check() while it may.
+//   g.check()       call it whenever the answer may have changed (a click,
+//                   an observer): it lets every waiting loop through.
+// A Promise is a value that will arrive later; `resolve` is the function that
+// delivers it. We keep the resolve functions of the waiting loops in a list.
+function gate(isOpen) {
+  let waiting = [];
+  return {
+    pass: () => (isOpen() ? Promise.resolve() : new Promise((resolve) => waiting.push(resolve))),
+    check() {
+      if (!isOpen()) return;
+      waiting.forEach((resolve) => resolve());
+      waiting = [];
+    },
+  };
+}
 
 function setupTerminal(terminal) {
   const lines = [...terminal.querySelectorAll(".line")];
@@ -71,12 +95,15 @@ function setupTerminal(terminal) {
   const cursor = document.createElement("span");
   cursor.className = "cursor";
 
-  let paused = false;
+  let paused = false;  // the button
+  let onScreen = true; // an observer below keeps this up to date
+  const resume = gate(() => !paused && onScreen);
 
-  // Like sleep(), but also waits while the animation is paused.
+  // Like sleep(), but also waits (at the gate) while the animation is paused
+  // or scrolled out of sight.
   async function wait(ms) {
     await sleep(ms);
-    while (paused) await sleep(100);
+    await resume.pass();
   }
 
   button.addEventListener("click", () => {
@@ -84,6 +111,7 @@ function setupTerminal(terminal) {
     button.textContent = paused ? "Play" : "Pause";
     button.setAttribute("aria-label", paused ? "Play animation" : "Pause animation");
     terminal.classList.toggle("is-paused", paused);
+    resume.check();
   });
 
   // async/await lets us write the animation top-to-bottom like a script,
@@ -121,6 +149,12 @@ function setupTerminal(terminal) {
     button.hidden = true; // nothing to pause: the text just sits there
   } else {
     play();
+    if ("IntersectionObserver" in window) {
+      new IntersectionObserver(([entry]) => {
+        onScreen = entry.isIntersecting;
+        resume.check();
+      }).observe(terminal);
+    }
   }
 }
 
@@ -147,6 +181,9 @@ if (header && "IntersectionObserver" in window) {
   sentinel.className = "scroll-sentinel"; // 6rem tall, pinned to the top (style.css)
   sentinel.setAttribute("aria-hidden", "true");
   document.body.prepend(sentinel);
+  // Only now does the CSS hide the border at the top of the page (.tracks-scroll):
+  // if this block never runs, the header keeps its border.
+  header.classList.add("tracks-scroll");
 
   new IntersectionObserver(([entry]) => {
     // Sentinel gone from the screen = we've scrolled past the top.
@@ -224,7 +261,8 @@ if (tracked.length && "IntersectionObserver" in window) {
 //   3. Keep it pausable: the Pause button, and an automatic pause while the
 //      diagram is off screen, so nothing runs where nobody is looking.
 // SVG animations have their own switch on each <svg>: pauseAnimations() and
-// unpauseAnimations(). The walk is a JS loop, paused the way the terminal is.
+// unpauseAnimations(). The walk is a JS loop that waits at a gate (see gate()
+// in section 2) while it's paused or off screen: no timer runs meanwhile.
 
 function setupDiagram(figure) {
   const svgs = [...figure.querySelectorAll("svg")];
@@ -242,18 +280,21 @@ function setupDiagram(figure) {
   let paused = false;   // the button
   let onScreen = false; // the observer below
   const running = () => !paused && onScreen;
+  const resume = gate(running);
 
+  // Call after every change of `paused` or `onScreen`.
   function sync() {
     for (const svg of svgs) {
       if (running()) svg.unpauseAnimations();
       else svg.pauseAnimations();
     }
+    resume.check();
   }
 
-  // Like the terminal's wait(): sleeps, then keeps waiting while not running.
+  // Like the terminal's wait(): sleeps, then waits at the gate while not running.
   async function wait(ms) {
     await sleep(ms);
-    while (!running()) await sleep(100);
+    await resume.pass();
   }
 
   // Step S of the walk: its line draws first (a CSS transition), then its box
@@ -291,17 +332,27 @@ function setupDiagram(figure) {
     });
   }
 
-  new IntersectionObserver(
+  // Two observers, two questions:
+  //  - "has it reached the middle of the screen?" -> draw it, once. The
+  //    rootMargin shrinks the watched area to the middle half of the screen, so
+  //    this works for a figure of any height (unlike "30% of it is visible",
+  //    which a figure taller than the screen might never reach).
+  //  - "is any of it on screen?" -> run or pause the loops.
+  const drawObserver = new IntersectionObserver(
     ([entry]) => {
-      onScreen = entry.isIntersecting;
-      if (onScreen && !figure.classList.contains("is-drawn")) {
-        figure.classList.add("is-drawn");
-        setTimeout(start, Number(figure.dataset.drawMs) || 0);
-      }
-      sync();
+      if (!entry.isIntersecting) return;
+      drawObserver.disconnect();
+      figure.classList.add("is-drawn");
+      setTimeout(start, Number(figure.dataset.drawMs) || 0);
     },
-    { threshold: 0.3 }
-  ).observe(figure);
+    { rootMargin: "-25% 0px -25% 0px" }
+  );
+  drawObserver.observe(figure);
+
+  new IntersectionObserver(([entry]) => {
+    onScreen = entry.isIntersecting;
+    sync();
+  }).observe(figure);
 }
 
 document.querySelectorAll("[data-diagram]").forEach(setupDiagram);
@@ -309,29 +360,42 @@ document.querySelectorAll("[data-diagram]").forEach(setupDiagram);
 // ---------------------------------------------------------------------------
 // 6. The demo video
 // ---------------------------------------------------------------------------
-// The HTML asks for autoplay (muted, looping) and shows the browser's controls,
-// so without JS you can still stop it. With JS we swap the controls for a small
-// Pause button like the diagrams'. Under reduced motion we cancel the autoplay
-// and keep the controls: the video plays only when you press play.
+// The HTML has no `autoplay`: playing is opt-in, and only this file opts in.
+// Without JS you get a still first frame (or the poster) and the browser's own
+// controls, so it plays only if you press play. Same under reduced motion:
+// we leave it exactly like that. Otherwise we swap the browser's controls for a
+// small Pause button like the diagrams', and play it (muted, looping) while
+// it's on screen, unless you paused it yourself.
 
 document.querySelectorAll("[data-demo-video]").forEach((video) => {
   const button = video.parentElement.querySelector("[data-demo-toggle]");
-
-  if (reduceMotion || !button) {
-    video.autoplay = false;
-    video.pause();
-    return;
-  }
+  if (reduceMotion || !button) return; // controls stay; nothing plays by itself
 
   video.controls = false;
   button.hidden = false;
+  let wanted = true; // false once you press Pause
   const label = () => {
     button.textContent = video.paused ? "Play" : "Pause";
     button.setAttribute("aria-label", video.paused ? "Play video" : "Pause video");
   };
+  // play() returns a promise that fails if the browser refuses (some save data
+  // or battery that way); then the video stays paused and the button says Play.
+  const play = () => video.play().catch(label);
   video.addEventListener("play", label);
   video.addEventListener("pause", label);
-  // play() returns a promise that fails if the browser refuses; then it stays paused.
-  button.addEventListener("click", () => (video.paused ? video.play().catch(label) : video.pause()));
+  button.addEventListener("click", () => {
+    wanted = video.paused;
+    if (wanted) play();
+    else video.pause();
+  });
   label();
+
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) video.pause();
+      else if (wanted) play();
+    }).observe(video);
+  } else {
+    play();
+  }
 });
