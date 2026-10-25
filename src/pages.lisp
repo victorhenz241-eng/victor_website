@@ -218,7 +218,7 @@ numbered section per part of the story. Returns a list of trees, one per block."
 (mapc (lambda (project)
         (let ((slug (getf project :slug)))
           (when slug
-            (defpage (case-study-path slug) (:title (getf project :name)
+            (defpage (case-study-path slug) (:title (format nil "~a · ~a" (getf project :name) *name*)
                                              :description (getf project :summary))
               (case-study project)))))
       *projects*)
