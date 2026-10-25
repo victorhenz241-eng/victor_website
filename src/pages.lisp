@@ -64,6 +64,8 @@ to see what this macro actually writes for you."
        (:a :href ,(format nil "~a#about" home) "About")
        (:a :href ,(format nil "~a#work" home) "Work")
        (:a :href ,(format nil "~a#projects" home) "Projects")
+       (:a :href ,(format nil "~a#education" home) "Education")
+       ;; Keep Contact last: on phones the CSS hides every link but the last one.
        (:a :href ,(format nil "~a#contact" home) "Contact")))))
 
 (defun layout (&key title description base body)

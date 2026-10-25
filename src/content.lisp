@@ -17,7 +17,7 @@ and pointed it at GitHub Pages — the build then writes the CNAME file for you.
 the repo's name (github.io/victor_website/); with a domain it sits at the root.
 Only the 404 page uses this: normal pages keep relative links, which work anywhere.")
 
-(defparameter *eyebrow* "Data & AI · Luxembourg"
+(defparameter *eyebrow* "AI engineering · CentraleSupélec × ESSEC"
   "The small monospace line above the big headline.")
 
 (defparameter *headline*
@@ -26,31 +26,36 @@ Only the 404 page uses this: normal pages keep relative links, which work anywhe
 the italic part gets its own <em> tag. Lisp data and HTML are the same thing here.")
 
 (defparameter *intro*
-  "AI engineering student at CentraleSupélec × ESSEC. I've built and shipped AI tools used in production at Canal+.")
+  "AI engineering student with a 4.0 GPA. I built and shipped two AI tools used in production at Canal+, and won first place among 120 participants at the Secure Horizons 2026 hackathon with a 4-person team. I'm looking for a Summer 2027 internship in applied AI or data science."
+  "Also used as the page's meta description, the snippet search engines show.")
 
 (defparameter *about*
-  '("At Canal+ I built internal AI applications that let leadership and editorial teams query company data in natural language, so people get numbers instead of tickets."
-    "TODO: one or two sentences on what drives you — what you like building, what you want to work on next.")
+  '("At Canal+ I built internal AI applications that let leadership and editorial teams query company data and assemble content selections in natural language."
+    ;; DRAFT — Victor to review: written from CV facts only
+    "I like taking a project from end to end and getting it into people's hands. That started with Parsed, the AI news app I co-founded, where I built the personalization engine and a political-bias detector. Away from the keyboard I run middle distance: I've represented Luxembourg in the 1500m at the European Youth Olympic Festival.")
   "Each string becomes one paragraph.")
 
 (defparameter *links*
   '(("GitHub"   "https://github.com/victorhenz241-eng")
-    ("LinkedIn" nil)                    ; TODO: your LinkedIn URL
+    ("LinkedIn" "https://www.linkedin.com/in/victor-henz-158471267/")
     ("Email"    "mailto:victor.henz@essec.edu") ; mailto: makes the link open an email
-    ("CV"       nil))                   ; TODO: put cv.pdf in static/ and write "cv.pdf"
+    ;; NIL on purpose: the CV PDF has your phone number on it, and everything in
+    ;; static/ is public. Export a copy without it, put that in static/, then write "cv.pdf".
+    ("CV"       nil))
   "(label url) pairs. Links with a NIL url are hidden.")
 
 (defparameter *repl*
   '((:in  "(victor:whoami)")
-    (:out "\"Victor Henz — AI engineering student\"")
-    (:in  "(victor:studying)")
-    (:out "(:program \"AIDAMS\" :schools (\"ESSEC\" \"CentraleSupélec\") :class 2028)")
-    (:in  "(victor:currently)")
-    (:out "(:building \"AI tools for business teams\" :learning \"Common Lisp\")")
+    (:out "(:study \"AI, Data & Management Sciences\" :at \"CentraleSupélec × ESSEC\" :gpa 4.0)")
+    (:in  "(victor:shipped :at \"Canal+\")")
+    (:out "(:ai-apps 2 :used-in :production :text-to-sql-eval \"35/36 (97%)\")")
+    (:in  "(victor:wins)")
+    (:out "(:hackathon \"Secure Horizons 2026\" :place 1 :participants 120 :prize \"€7,000\")")
     (:in  "(victor:next)")
-    (:out "\"Summer 2027 internship — New York or San Francisco\""))
+    (:out "(:internship \"Summer 2027\" :fields (\"applied AI\" \"data science\") :in-dc-from \"Jan 2027\")"))
   "The animated terminal in the hero. :in lines get typed out, :out lines appear
-at once. TODO: make these yours — they're the first thing a recruiter sees move.")
+at once. Every value is a fact from the CV: keep it that way when you change them.
+Four in/out pairs at most, so the animation stays short.")
 
 (defparameter *experience*
   '((:role "AI Engineer Intern"
@@ -62,7 +67,7 @@ at once. TODO: make these yours — they're the first thing a recruiter sees mov
      :org "Parsed"
      :place "Luxembourg"
      :dates "Jan 2025 · 6 months"
-     :summary "Launched an AI news app on the App Store, personalized to each user's profession and location. Built the personalization engine and a political-bias detector. 2,000+ users and coverage in the Luxembourg press."))
+     :summary "Co-founded and launched an AI news app on the App Store, personalized to each user's profession and location. Built the personalization engine and a political-bias detector. Grew it to 2,000+ users, with coverage in the Luxembourg press."))
   "Newest first. Add as many plists as you want.")
 
 (defparameter *education*
@@ -78,7 +83,12 @@ at once. TODO: make these yours — they're the first thing a recruiter sees mov
      :summary "GPA 4.0 / 4.0. Machine learning, computer vision, stochastic processes, algorithms, big data systems.")))
 
 (defparameter *projects*
-  '((:name "Event-Market Graph"
+  ;; Strongest first: a recruiter may only read the first card or two.
+  '((:name "Cut the Line — 1st of 120"
+     :url nil
+     :summary "Won first place among 120 participants at the Secure Horizons 2026 hackathon (ESSEC) and the €7,000 prize, with a 4-person team. We built a product that detects phone scams and AI-cloned voices, and pitched it to a jury that included KPMG's Head of AI."
+     :tags ("hackathon winner" "AI voice" "scam detection"))
+    (:name "Event-Market Graph"
      :slug "event-market-graph"           ; a :slug means "give this project its own page"
      :url "https://event-market-graph-ten.vercel.app"
      :summary "A Neo4j knowledge graph linking geopolitical events to market moves, with a LangGraph agent that walks it. Team project: I built the animated frontend and the infrastructure."
@@ -123,14 +133,10 @@ at once. TODO: make these yours — they're the first thing a recruiter sees mov
        "The LinkedIn part stays manual. The app prepares text and tracks threads, but never sends a message, never connects and never fetches a LinkedIn page, because automating LinkedIn gets accounts restricted.")
       ("Stack"
        "Self-hosted n8n in Docker on a Google Cloud VM behind Caddy, a Rust dedup service, Groq for the LLM, Supabase (Postgres, auth, row-level security) and Next.js on Vercel.")))
-    (:name "Cut the Line — 1st of 120"
-     :url nil
-     :summary "Won the Secure Horizons 2026 hackathon (ESSEC, €7,000 prize) with a 4-person team, building a product that detects phone scams and AI-cloned voices."
-     :tags ("hackathon" "AI voice"))
     (:name "EFC Tracker"
      :url nil                           ; private repo
-     :summary "An installable web app for the ESSEC Football Club's 9-week conditioning program, with iOS push reminders, now being extended to the whole club."
-     :tags ("Next.js" "PWA" "Redis"))
+     :summary "Built and deployed a progressive web app for the ESSEC Football Club's 9-week conditioning program, with iOS push reminders. Now extending it to the whole club."
+     :tags ("Next.js" "TypeScript" "Redis" "PWA"))
     (:name "This website"
      :url nil                           ; TODO: the victor_website repo is private — link it once public
      :summary "Generated by a few hundred lines of Common Lisp, including a tiny HTML renderer written from scratch. No framework."

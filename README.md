@@ -90,7 +90,9 @@ Nothing needs restarting. Things to try:
 
 ## Next steps
 
-**Content:** fill in every `TODO` in `content.lisp`, especially `*repl*`, since that's the first thing people see move.
+**Content:** every sentence in `content.lisp` comes from the CV. Review the About
+paragraph marked `DRAFT`, and add a `cv.pdf` without your phone number to `static/`
+when you want the CV link to appear. Keep `*repl*` factual and to four commands.
 
 **Lisp**
 - [x] Generate one page per project from `*projects*` (add a `:slug`).
@@ -101,4 +103,3 @@ Nothing needs restarting. Things to try:
 - [ ] Make the header shrink when you scroll.
 - [ ] Highlight the current section in the nav.
 - [ ] Add a second animated "mockup": a small chart that draws itself would suit a data person.
-# victor_website
