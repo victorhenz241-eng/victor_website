@@ -108,6 +108,24 @@ h1, h2, h3 { margin: 0; line-height: 1.15; font-weight: 500; }
   white-space: nowrap;
 }
 
+/* "Skip to content": the first link on every page, for keyboard users. It waits
+   above the top of the screen and slides in when Tab gives it the focus. */
+.skip-link {
+  position: absolute;
+  top: var(--s1);
+  left: var(--s2);
+  z-index: 20;                     /* above the sticky header */
+  padding: 0.375rem 0.875rem;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 0.875rem;
+  text-decoration: none;
+  transform: translateY(-200%);
+  transition: transform 0.2s var(--ease);
+}
+.skip-link:focus { transform: none; }
+
 /* Small keyboard keys, e.g. the ⌘K chip and the hints in the command menu. */
 kbd {
   font-family: var(--font-mono);

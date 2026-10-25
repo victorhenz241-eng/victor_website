@@ -13,21 +13,29 @@
 (defvar *pages* (make-hash-table :test #'equal)
   "Maps an output file name (\"index.html\") to a function that returns its HTML tree.")
 
-(defmacro defpage (path (&key title description base home-page) &body body)
+(defmacro defpage (path (&key title description base home-page noindex) &body body)
   "Define a page written to PATH. Each BODY form is evaluated (at build time) and must
 return an HTML tree, so quote literal HTML: '(:p \"hi\") or `(:p ,*name*).
 BASE is only for pages that need absolute links (the 404 page); see LAYOUT.
 HOME-PAGE is T only for index.html, so its section links can stay on the page.
+NOINDEX asks search engines to leave the page out of their results (the 404).
 
 Try (macroexpand-1 '(defpage \"x.html\" (:title \"X\") '(:p \"hi\"))) in the REPL
 to see what this macro actually writes for you."
-  `(setf (gethash ,path *pages*)
-         (lambda ()
-           (layout :title ,title
-                   :description ,description
-                   :base ,base
-                   :home-page ,home-page
-                   :body (list ,@body)))))
+  ;; PATH is used twice below, so it's evaluated once first, into FILE.
+  ;; GENSYM makes a fresh, unique symbol for that variable, so its name can't
+  ;; clash with a variable of the same name inside BODY.
+  (let ((file (gensym "FILE")))
+    `(let ((,file ,path))
+       (setf (gethash ,file *pages*)
+             (lambda ()
+               (layout :title ,title
+                       :description ,description
+                       :path ,file
+                       :base ,base
+                       :home-page ,home-page
+                       :noindex ,noindex
+                       :body (list ,@body)))))))
 
 ;;; ------------------------------------------------------------------
 ;;; Motion helpers
@@ -53,7 +61,17 @@ to see what this macro actually writes for you."
 ;;; ------------------------------------------------------------------
 
 (defparameter *font-url*
-  "https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Literata:ital,wght@0,400;0,500;1,400&display=swap")
+  "https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Literata:ital,wght@0,400;0,500;1,400&display=swap"
+  "The three typefaces, from Google Fonts. display=swap: the text shows at once
+in a fallback font and switches when the real one arrives, so a slow network
+never leaves the page blank.")
+
+(defun page-url (path)
+  "The full address of the page written to PATH, e.g. \"https://victorhenz.com/\"
+for index.html. NIL while *DOMAIN* is NIL: without a domain the final address
+isn't certain, and a wrong address in the head is worse than none."
+  (when *domain*
+    (format nil "https://~a/~a" *domain* (if (equal path "index.html") "" path))))
 
 (defparameter *home-sections*
   '(("about" "About")
@@ -206,9 +224,10 @@ a text box that controls a list box of options, grouped under small mono labels.
                                      :data-keywords ,(when keywords
                                                        (format nil "~{~a~^ ~}" keywords))
                                    (:span :class "cmdk-label" ,label
-                                          ;; ↗ marks links that leave the site.
+                                          ;; ↗ marks links that leave the site. aria-hidden:
+                                          ;; screen readers would say "north east arrow".
                                           ,(when (and href (uiop:string-prefix-p "http" href))
-                                             '(:span :class "arrow" " ↗")))
+                                             '(:span :class "arrow" :aria-hidden "true" " ↗")))
                                    (:span :class "cmdk-hint" ,hint)))))))
         ;; Outside the list box on purpose: a listbox may only contain options.
         (:p :class "cmdk-empty" :hidden t "No matches.")
@@ -219,18 +238,19 @@ a text box that controls a list box of options, grouped under small mono labels.
          (:span (:kbd "↵") " open")
          (:span (:kbd "esc") " close"))))))
 
-(defun layout (&key title description base home-page body)
+(defun layout (&key title description path base home-page noindex body)
   "The HTML shared by every page. BASE is NIL for normal pages, which keeps every
 link relative (\"style.css\"), so the site works at any address. Given a BASE like
 \"/victor_website/\", links become absolute (\"/victor_website/style.css\").
-HOME-PAGE is T on index.html only (see HOME below)."
+HOME-PAGE is T on index.html only (see HOME below). PATH is the page's file name."
   ;; HOME is what we put in front of "#about" to reach the home page's sections.
   ;; On the home page: nothing. A link to "./#about" would work at /, but at
   ;; /index.html it points to a *different* address (/), so the browser reloads.
   ;; COND tries each test in order and returns the value of the first true one.
   (let ((home (cond (home-page "")
                     (base base)
-                    (t "./"))))
+                    (t "./")))
+        (url (unless noindex (page-url path))))
     `(:html :lang "en"
        (:head
         (:meta :charset "utf-8")
@@ -238,6 +258,30 @@ HOME-PAGE is T on index.html only (see HOME below)."
         (:title ,title)
         ,(when description
            `(:meta :name "description" :content ,description))
+        ;; How a link to the page looks when it's shared (LinkedIn, Slack,
+        ;; iMessage...): Open Graph tags, which most apps read, and a card type
+        ;; for X. There's no og:image on purpose: the apps then show a plain
+        ;; text card, which is better than an invented picture.
+        (:meta :property "og:type" :content "website")
+        (:meta :property "og:site_name" :content ,*name*)
+        (:meta :property "og:title" :content ,title)
+        ,(when description
+           `(:meta :property "og:description" :content ,description))
+        ,(when url `(:meta :property "og:url" :content ,url))
+        (:meta :name "twitter:card" :content "summary")
+        ;; canonical = "this is the page's one true address", for search engines.
+        ,(when url `(:link :rel "canonical" :href ,url))
+        ,(when noindex '(:meta :name "robots" :content "noindex"))
+        ;; The color phones give the browser bar around the page, one per theme.
+        (:meta :name "theme-color" :content "#fafafb" :media "(prefers-color-scheme: light)")
+        (:meta :name "theme-color" :content "#0e1114" :media "(prefers-color-scheme: dark)")
+        ;; The tab icon. Without one, every browser asks for /favicon.ico and gets a 404.
+        (:link :rel "icon" :type "image/svg+xml" :href ,(format nil "~@[~a~]favicon.svg" base))
+        ;; The fonts' stylesheet blocks the first paint until it arrives (one small
+        ;; file). preconnect opens the connections to Google early, and
+        ;; display=swap (in *FONT-URL*) shows the text before the fonts themselves
+        ;; arrive. Loading the stylesheet "async" would save a little more, but
+        ;; then the whole page would flash in fallback fonts first: not worth it here.
         (:link :rel "preconnect" :href "https://fonts.googleapis.com")
         (:link :rel "preconnect" :href "https://fonts.gstatic.com" :crossorigin t)
         (:link :rel "stylesheet" :href ,*font-url*)
@@ -248,8 +292,11 @@ HOME-PAGE is T on index.html only (see HOME below)."
         (:script :src ,(format nil "~@[~a~]command-menu.js" base) :defer t)
         (:script :src ,(format nil "~@[~a~]source-view.js" base) :defer t))
        (:body :id "top"
+        ;; The first thing Tab reaches: keyboard users can jump past the header
+        ;; straight to the content. Off screen until it has the focus (style.css).
+        (:a :class "skip-link" :href "#main" "Skip to content")
         ,(site-header home)
-        (:main :class "page" ,@body)
+        (:main :id "main" :class "page" ,@body)
         (:footer :class "page footer"
          (:span "© " ,*name*)
          (:span "Built with " (:a :href "https://lisp-lang.org" "Common Lisp")
@@ -712,7 +759,8 @@ swaps those controls for a small Pause button and plays it, muted, while it's on
            (:figcaption :class "diagram-caption"
             (:span ,caption
                    ,(when live-url
-                      `(" " (:a :href ,live-url "Live demo" (:span :class "arrow" " ↗")))))))))))
+                      `(" " (:a :href ,live-url "Live demo"
+                                (:span :class "arrow" :aria-hidden "true" " ↗")))))))))))
 
 (defun case-study-path (slug)
   "The file a project's page is written to: \"internship-radar\" -> \"internship-radar.html\"."
@@ -722,8 +770,10 @@ swaps those controls for a small Pause button and plays it, muted, while it's on
   ;; &allow-other-keys: the plist also has :stats, :sections... that the card ignores.
   (destructuring-bind (&key name slug url summary tags &allow-other-keys) project
     `(:li :class "card" :data-reveal t :style ,(stagger i)
-       (:h3 ,(cond (slug `(:a :href ,(case-study-path slug) ,name (:span :class "arrow" " →")))
-                   (url `(:a :href ,url ,name (:span :class "arrow" " ↗")))
+       ;; The arrows are decoration (aria-hidden): the link's name is the project's name.
+       (:h3 ,(cond (slug `(:a :href ,(case-study-path slug) ,name
+                              (:span :class "arrow" :aria-hidden "true" " →")))
+                   (url `(:a :href ,url ,name (:span :class "arrow" :aria-hidden "true" " ↗")))
                    (t name)))
        (:p ,summary)
        (:ul :class "tags"
@@ -765,14 +815,15 @@ then one numbered section per part. PARTS is a list of (heading panel content)."
   `((:div :class "hero case-hero"
       ,@(with-source hero-panel
           `(:p :class "eyebrow" :data-reveal t :style ,(stagger 0)
-             (:a :class "back" :href "./#projects" "← All work"))
+             (:a :class "back" :href "./#projects" (:span :aria-hidden "true" "← ") "All work"))
           `(:h1 :data-reveal t :style ,(stagger 1) ,name)
           `(:p :class "intro" :data-reveal t :style ,(stagger 2) ,summary)
           `(:div :data-reveal t :style ,(stagger 3)
              (:ul :class "tags" ,@(mapcar (lambda (tag) `(:li ,tag)) tags))
              (:ul :class "links"
               ,@(loop for (label url) in links
-                      collect `(:li (:a :class "pill" :href ,url ,label " ↗")))))
+                      collect `(:li (:a :class "pill" :href ,url ,label
+                                        (:span :aria-hidden "true" " ↗"))))))
           `(:ul :class "stats" :data-reveal t :style ,(stagger 4)
              ,@(loop for (value label) in stats
                      collect `(:li (:strong ,value) (:span ,label))))))
@@ -823,8 +874,10 @@ then one numbered section per part. PARTS is a list of (heading panel content)."
 ;;; to /victor_website/a/style.css, which doesn't exist, so this one page uses
 ;;; absolute links that start with *base-path* (see content.lisp).
 
-(defpage "404.html" (:title "Not found" :base *base-path*)
+(defpage "404.html" (:title "Not found"
+                     :description "This page doesn't exist. The home page has everything else."
+                     :base *base-path* :noindex t)
   `(:div :class "hero"
      (:p :class "eyebrow" "404")
      (:h1 "Nothing " (:em "here") ".")
-     (:p :class "intro" (:a :href ,*base-path* "Back home →"))))
+     (:p :class "intro" (:a :href ,*base-path* "Back home" (:span :aria-hidden "true" " →")))))
