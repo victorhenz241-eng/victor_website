@@ -150,8 +150,9 @@ changes nothing around it, and it's cheap to animate (see Effect 2).
 **In plain words:** on the home page, the nav link of the section you're reading turns
 dark and gets a thin line under it that grows from the left.
 
-1. **Which links?** `motion.js` (section 4) takes each nav link, reads its `#about`
-   part, and keeps it only if *this* page has an element with that id. So on a project
+1. **Which links?** On the home page Lisp writes the nav links as plain `#about`; on
+   other pages as `./#about` (see Effect 8 for why). So `motion.js` (section 4) keeps
+   only the links whose `href` starts with `#` and whose section exists. On a project
    page or the 404 nothing gets highlighted. We considered lighting up "Projects" on
    project pages, but that link goes to the home page, not to the page you're on, so
    it would be slightly misleading. The "← All work" link already tells you where you are.
@@ -182,18 +183,29 @@ header. A small window opens. Type to filter, use ↑ ↓ to choose, Enter to go
 every entry already inside: the home sections (from `*home-sections*`, the same list
 the header uses), one entry per project page (`:slug`), one per project with a `:url`,
 and your `*links*`. So adding a project to `content.lisp` adds it to the menu, with
-no JS change. `commands` takes `home` like `site-header` does, which is why the links
-work from a project page (`./#about`) and from the 404 page (`/victor_website/#about`).
+no JS change. `commands` takes `home` like `site-header` does. `layout` picks it:
+
+| Page | `home` | Link to About |
+|---|---|---|
+| home page (`:home-page t` in its `defpage`) | `""` | `#about` |
+| a project page | `"./"` | `./#about` |
+| the 404 page | `*base-path*` | `/victor_website/#about` |
+
+Why not `./#about` everywhere? At `/victor_website/` it works, but if someone opens
+`/victor_website/index.html`, then `./` means `/victor_website/`, a *different* address,
+so the browser reloads the page instead of just scrolling. A bare `#about` always means
+"this page". (The home link becomes `#top` on the home page, for the same reason.)
 
 **The browser does the hard parts.** `<dialog>` opened with `showModal()`:
-- keeps the Tab key inside the dialog (a "focus trap"),
+- makes the rest of the page "inert": it can't be clicked or tabbed to while the menu is open,
 - closes on Esc,
 - dims the page behind it (the `::backdrop`),
 - and puts the focus back where it was when it closes.
 
 **JS does the rest** (`static/command-menu.js`):
 - **Filtering:** each word you type must appear in the entry's text, hint, group name or
-  tags. Everything is lowercased and accents are removed, so `supelec` finds `Supélec`.
+  tags. Everything is lowercased and accents are removed, so `supelec` would also
+  find an entry spelled `Supélec`.
 - **The selection:** the focus never leaves the text box. Instead, `aria-activedescendant`
   on the text box holds the `id` of the selected option, and screen readers read that
   option out. This is the ARIA *combobox* pattern: a text box that controls a *listbox*.

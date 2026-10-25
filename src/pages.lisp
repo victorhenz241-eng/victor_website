@@ -13,10 +13,11 @@
 (defvar *pages* (make-hash-table :test #'equal)
   "Maps an output file name (\"index.html\") to a function that returns its HTML tree.")
 
-(defmacro defpage (path (&key title description base) &body body)
+(defmacro defpage (path (&key title description base home-page) &body body)
   "Define a page written to PATH. Each BODY form is evaluated (at build time) and must
 return an HTML tree, so quote literal HTML: '(:p \"hi\") or `(:p ,*name*).
 BASE is only for pages that need absolute links (the 404 page); see LAYOUT.
+HOME-PAGE is T only for index.html, so its section links can stay on the page.
 
 Try (macroexpand-1 '(defpage \"x.html\" (:title \"X\") '(:p \"hi\"))) in the REPL
 to see what this macro actually writes for you."
@@ -25,6 +26,7 @@ to see what this macro actually writes for you."
            (layout :title ,title
                    :description ,description
                    :base ,base
+                   :home-page ,home-page
                    :body (list ,@body)))))
 
 ;;; ------------------------------------------------------------------
@@ -64,13 +66,20 @@ to see what this macro actually writes for you."
 one list: the links in the header and the \"Pages\" group of the command menu.
 The ids must match the SECTION calls in the index.html page below.")
 
+(defun home-link (home)
+  "Where a \"go to the home page\" link points. HOME is the prefix that leads to the
+home page (see LAYOUT). On the home page itself it is \"\", and an empty href would
+reload the page, so we jump to the top of the page instead (<body id=\"top\">)."
+  (if (equal home "") "#top" home))
+
 (defun site-header (home)
-  ;; HOME is the address of the home page: "./" on normal pages.
+  ;; HOME is the prefix that leads to the home page (see LAYOUT):
+  ;;   ""         on the home page itself -> links like "#about" just scroll;
+  ;;   "./"       on a project page       -> "./#about" goes back home first;
+  ;;   a base path on the 404 page         -> "/victor_website/#about".
   `(:header :class "site-header"
      (:div :class "page header-inner"
-      ;; "./#about" instead of "#about": from a project page, "#about" would look
-      ;; for an #about on *that* page. "./" always means the home page.
-      (:a :class "wordmark" :href ,home ,*name*)
+      (:a :class "wordmark" :href ,(home-link home) ,*name*)
       (:div :class "header-end"
        ;; aria-label names this nav for screen readers, which list every landmark.
        (:nav :aria-label "Sections"
@@ -93,7 +102,7 @@ The ids must match the SECTION calls in the index.html page below.")
   ;; shows it to everyone else, so it's aria-hidden to avoid saying it twice.
   `(:button :type "button" :class "cmdk-button" :hidden t
             :aria-haspopup "dialog" :aria-controls "cmdk"
-            :aria-keyshortcuts "Meta+K Control+K /"
+            :aria-keyshortcuts "Meta+K /"   ; command-menu.js swaps in Control+K off a Mac
             :data-cmdk-open t
      (:span :class "cmdk-button-text" "Search")
      (:kbd :aria-hidden "true" :data-cmdk-key t "⌘K")))
@@ -119,7 +128,7 @@ Anything else (a relative link like \"cv.pdf\") is returned as it is."
   "Every entry of the command menu, as a list of plists. HOME plays the same role
 as in SITE-HEADER, so the links work from the home page, a project page and the 404."
   (append
-   (list `(:group "Pages" :label "Home" :href ,home :hint "top"))
+   (list `(:group "Pages" :label "Home" :href ,(home-link home) :hint "top"))
    ;; A missing 3rd item just makes WORDS NIL.
    (loop for (id label words) in *home-sections*
          collect `(:group "Pages" :label ,label :keywords ,(when words (list words))
@@ -190,34 +199,42 @@ a text box that controls a list box of options, grouped under small mono labels.
          (:span (:kbd "↵") " open")
          (:span (:kbd "esc") " close"))))))
 
-(defun layout (&key title description base body)
+(defun layout (&key title description base home-page body)
   "The HTML shared by every page. BASE is NIL for normal pages, which keeps every
 link relative (\"style.css\"), so the site works at any address. Given a BASE like
-\"/victor_website/\", links become absolute (\"/victor_website/style.css\")."
-  `(:html :lang "en"
-     (:head
-      (:meta :charset "utf-8")
-      (:meta :name "viewport" :content "width=device-width, initial-scale=1")
-      (:title ,title)
-      ,(when description
-         `(:meta :name "description" :content ,description))
-      (:link :rel "preconnect" :href "https://fonts.googleapis.com")
-      (:link :rel "preconnect" :href "https://fonts.gstatic.com" :crossorigin t)
-      (:link :rel "stylesheet" :href ,*font-url*)
-      ;; ~@[...~] in FORMAT prints its contents only when the argument isn't NIL.
-      (:link :rel "stylesheet" :href ,(format nil "~@[~a~]style.css" base))
-      ;; defer = download now, run after the HTML is parsed.
-      (:script :src ,(format nil "~@[~a~]motion.js" base) :defer t)
-      (:script :src ,(format nil "~@[~a~]command-menu.js" base) :defer t))
-     (:body :id "top"
-      ,(site-header (or base "./"))
-      (:main :class "page" ,@body)
-      (:footer :class "page footer"
-       (:span "© " ,*name*)
-       (:span "Built with " (:a :href "https://lisp-lang.org" "Common Lisp")
-              " and a little CSS"))
-      ;; The dialog sits outside <main>: it's closed (invisible) until opened.
-      ,(command-menu (or base "./")))))
+\"/victor_website/\", links become absolute (\"/victor_website/style.css\").
+HOME-PAGE is T on index.html only (see HOME below)."
+  ;; HOME is what we put in front of "#about" to reach the home page's sections.
+  ;; On the home page: nothing. A link to "./#about" would work at /, but at
+  ;; /index.html it points to a *different* address (/), so the browser reloads.
+  ;; COND tries each test in order and returns the value of the first true one.
+  (let ((home (cond (home-page "")
+                    (base base)
+                    (t "./"))))
+    `(:html :lang "en"
+       (:head
+        (:meta :charset "utf-8")
+        (:meta :name "viewport" :content "width=device-width, initial-scale=1")
+        (:title ,title)
+        ,(when description
+           `(:meta :name "description" :content ,description))
+        (:link :rel "preconnect" :href "https://fonts.googleapis.com")
+        (:link :rel "preconnect" :href "https://fonts.gstatic.com" :crossorigin t)
+        (:link :rel "stylesheet" :href ,*font-url*)
+        ;; ~@[...~] in FORMAT prints its contents only when the argument isn't NIL.
+        (:link :rel "stylesheet" :href ,(format nil "~@[~a~]style.css" base))
+        ;; defer = download now, run after the HTML is parsed.
+        (:script :src ,(format nil "~@[~a~]motion.js" base) :defer t)
+        (:script :src ,(format nil "~@[~a~]command-menu.js" base) :defer t))
+       (:body :id "top"
+        ,(site-header home)
+        (:main :class "page" ,@body)
+        (:footer :class "page footer"
+         (:span "© " ,*name*)
+         (:span "Built with " (:a :href "https://lisp-lang.org" "Common Lisp")
+                " and a little CSS"))
+        ;; The dialog sits outside <main>: it's closed (invisible) until opened.
+        ,(command-menu home)))))
 
 ;;; ------------------------------------------------------------------
 ;;; Building blocks
@@ -319,7 +336,7 @@ numbered section per part of the story. Returns a list of trees, one per block."
 ;;; Pages
 ;;; ------------------------------------------------------------------
 
-(defpage "index.html" (:title *name* :description *intro*)
+(defpage "index.html" (:title *name* :description *intro* :home-page t)
   (hero)
   (section "about" 1 "About"
            `(:div :class "prose" :data-reveal t

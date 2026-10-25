@@ -155,9 +155,9 @@ if (header && "IntersectionObserver" in window) {
 // ---------------------------------------------------------------------------
 // 4. Highlight the section you're reading
 // ---------------------------------------------------------------------------
-// Each nav link points to a section, e.g. "./#about". We keep only the links
-// whose section exists on *this* page, so on a project page or the 404 nothing
-// is highlighted. (Lighting up "Projects" there was tempting, but that link
+// On the home page Lisp writes the nav links as "#about" (elsewhere "./#about",
+// which leads back home). So "the href starts with #" means "this section is on
+// the page you're reading", and on a project page or the 404 nothing is highlighted. (Lighting up "Projects" there was tempting, but that link
 // leads to the home page, not to the page you're on, so it would be a small lie,
 // and aria-current would tell screen readers the same lie. The "← All work"
 // link at the top already says where you are.)
@@ -166,8 +166,8 @@ if (header && "IntersectionObserver" in window) {
 // the way down the screen, which is where your eyes usually are. The rootMargin
 // below shrinks the observed area to that band: 35% off the top, 60% off the bottom.
 
-const tracked = [...document.querySelectorAll(".site-header nav a")]
-  .map((link) => ({ link, section: document.getElementById(new URL(link.href).hash.slice(1)) }))
+const tracked = [...document.querySelectorAll('.site-header nav a[href^="#"]')]
+  .map((link) => ({ link, section: document.getElementById(link.getAttribute("href").slice(1)) }))
   .filter((t) => t.section);
 
 if (tracked.length && "IntersectionObserver" in window) {

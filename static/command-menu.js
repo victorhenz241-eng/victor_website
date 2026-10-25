@@ -21,9 +21,10 @@ function setupCommandMenu(dialog) {
   const empty = dialog.querySelector(".cmdk-empty");
   const status = dialog.querySelector("[data-cmdk-status]");
 
-  // "Supélec" should match "supelec": normalize("NFD") splits "é" into "e" + an
-  // accent mark, and the regular expression removes the accent marks.
-  const simplify = (text) => text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  // Typing "supelec" should find "Supélec": normalize("NFD") splits "é" into "e" + an
+  // accent mark, and the regular expression removes the accent marks
+  // (U+0300 to U+036F is the Unicode block of "combining" accents).
+  const simplify = (text) => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
   // What each option can be found by: its text, its hint, its group and the
   // extra words Lisp put in data-keywords (a project's tags). Computed once.
@@ -63,6 +64,8 @@ function setupCommandMenu(dialog) {
     }
     const shown = shownOptions();
     empty.hidden = shown.length > 0;
+    // aria-expanded tells screen readers whether there's a list to explore.
+    input.setAttribute("aria-expanded", String(shown.length > 0));
     select(shown[0]);
     return shown.length;
   }
@@ -102,7 +105,8 @@ function setupCommandMenu(dialog) {
     } else if (event.key === "ArrowUp" && shown.length) {
       event.preventDefault();
       select(shown[(i - 1 + shown.length) % shown.length]);
-    } else if (event.key === "Enter" && active) {
+    } else if (event.key === "Enter" && active && !event.isComposing) {
+      // (isComposing: Enter is also how Chinese/Japanese input confirms a word.)
       event.preventDefault();
       go(active, event.metaKey || event.ctrlKey); // ⌘/Ctrl+Enter opens a new tab
     }
@@ -129,13 +133,20 @@ function setupCommandMenu(dialog) {
   for (const button of document.querySelectorAll("[data-cmdk-open]")) {
     button.hidden = false;
     button.addEventListener("click", open);
-    if (!isMac) button.querySelector("[data-cmdk-key]").textContent = "Ctrl K";
+    if (!isMac) {
+      // Lisp wrote the Mac version of the shortcut; switch both copies of it.
+      button.querySelector("[data-cmdk-key]").textContent = "Ctrl K";
+      button.setAttribute("aria-keyshortcuts", "Control+K /");
+    }
   }
 
   // Keyboard shortcuts, anywhere on the page.
+  // ⌘K on a Mac, Ctrl+K elsewhere. (On a Mac, Ctrl+K inside a text box means
+  // "delete to the end of the line", so we leave it alone there.)
   const isTyping = (el) => el.closest?.("input, textarea, select, [contenteditable]");
   document.addEventListener("keydown", (event) => {
-    if ((event.metaKey || event.ctrlKey) && !event.altKey && event.key.toLowerCase() === "k") {
+    const modifier = isMac ? event.metaKey : event.ctrlKey;
+    if (modifier && !event.altKey && event.key.toLowerCase() === "k") {
       event.preventDefault(); // browsers use Ctrl+K for "search the web"
       if (dialog.open) dialog.close();
       else open();
