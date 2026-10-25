@@ -90,13 +90,16 @@ function setupSourceView() {
     }
   }
 
-  function set(state, animate) {
+  // keepPlace: hold the section you're reading still (see measure). Not on page
+  // load: nothing has been read yet, and the #section jump at the bottom of
+  // this file decides where the page starts.
+  function set(state, animate, keepPlace = true) {
     on = state;
     sourceToggle.setAttribute("aria-pressed", String(state));
     clearSteps();
 
     if (!animate || reduceMotion.matches) {
-      const anchor = measure();
+      const anchor = keepPlace && measure();
       swap(state);
       restore(anchor);
       return;
@@ -143,5 +146,12 @@ function setupSourceView() {
   });
 
   // Coming back to the site with source mode on: no animation, just show it.
-  if (load()) set(true, false);
+  // The swap changes the height of every section, so if the address has a
+  // #section (like the "← All work" link to ./#projects), the browser's jump to
+  // it may have landed on the old layout: jump again, to the new one.
+  if (load()) {
+    set(true, false, false);
+    const target = location.hash && document.getElementById(decodeURIComponent(location.hash.slice(1)));
+    if (target) target.scrollIntoView({ behavior: "instant" });
+  }
 }

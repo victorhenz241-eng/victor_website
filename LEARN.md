@@ -235,6 +235,24 @@ source files as text and cuts out the exact characters of each form, comments an
 spacing included. Change a sentence in `content.lisp`, rebuild, and the source view
 changes with it. The line numbers in each panel are the real ones too.
 
+**Private notes: `;; private:`.** "Comments included" means every comment inside
+those forms is published to every visitor. So there are two kinds of comment:
+- a normal comment is part of the showcase: write it for a recruiter
+  (`; mailto: makes the link open an email`);
+- a comment that starts with `private:` is a note for you only. The build cuts it out
+  of every panel, but it stays in the file:
+
+```lisp
+    ;; private: DRAFT, check these numbers      <- whole line: the line is dropped
+    :url nil  ; private: repo not public yet    <- end of a line: only the comment goes
+```
+
+`strip-private-comments` (in `chunk`, section 2 of `source.lisp`) walks the text the way
+the reader would, so a `;` inside a `"string"` or a `#\;` character is never mistaken
+for a comment. Panels can then be a few lines shorter than the range they show.
+Docstrings are code, not comments, so they're always shown: keep them neutral.
+The rule is also written at the top of `content.lisp`.
+
 **Step 1: read a file as text** (`src/source.lisp`, section 1). `source-text` returns
 the whole of `src/content.lisp` as one string. Lisp code is just text until something
 *reads* it.
@@ -267,7 +285,8 @@ after the list's `(`. That's how a case-study page shows only its own project.
 **Step 3: color it with a tokenizer** (`highlight`, section 3). It walks the text one
 character at a time and recognises a few shapes: `;` to the end of the line is a
 comment, `"` to the next unescaped `"` is a string, `:word` is a keyword, a symbol
-right after `(` is an operator, parens and quote marks are punctuation. Each piece
+right after `(` is an operator, parens and quote marks are punctuation, and `#\x`
+is a single character (so `#\;` doesn't start a comment). Each piece
 becomes `(:span :class "c-string" "...")`, plain Lisp data, so `html.lisp` escapes
 it like any other text. A tokenizer doesn't need to *understand* Lisp, only to tell
 these shapes apart.
@@ -291,18 +310,26 @@ page is exactly the same as before.** `static/source-view.js` copies the panels 
 3. Swapping changes every section's height, which would make the page jump. So just
    before the swap JS notes where the section you're reading sits on screen, and just
    after, scrolls by the difference. You stay on the same section.
+4. Coming back with the source view already on, there's no animation and nothing to
+   hold in place: the swap happens once, at load. If the address has a `#section`
+   (the "← All work" link goes to `./#projects`), JS jumps to it again, because the
+   browser's first jump was measured on the old, shorter layout.
 
 `hidden` matters for accessibility: a screen reader reads either the content or the
 code, never both. The button is a `<button aria-pressed>`, which screen readers
 announce as a toggle ("source, toggle button, pressed"), and the CSS styles the
 pressed state from that same attribute. With reduced motion, the swap is instant.
+Hiding the hero would also hide the page's only `<h1>`, so the hero's panel carries
+its own copy with `class="sr-only"` (`:heading` in `source-panel`): invisible, but
+screen-reader users still land on a page with a title.
 
 **Remembering the choice:** `localStorage` keeps a small value per site in the
 browser. It can throw an error (private windows, blocked storage), so every use is
 wrapped in `try { } catch { }`: if it fails, the site just doesn't remember.
 
 **Try it:** add a comment inside `*education*` in `content.lisp`, rebuild, and open the
-source view: your comment is there. Then call `(form-slices (source-text
+source view: your comment is there. Now start it with `private:`, rebuild: it's gone
+from the page but still in your file. Then call `(form-slices (source-text
 "content.lisp") 0)` in the REPL and look at the numbers.
 
 ---
