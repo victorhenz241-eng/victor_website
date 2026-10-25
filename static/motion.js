@@ -1,10 +1,12 @@
 // motion.js — every moving part of the site, in plain JavaScript (no libraries).
 //
-// Four features:
+// Six features:
 //   1. Scroll reveal: elements marked data-reveal fade/slide in when they enter the screen.
 //   2. The terminal: replays the REPL session in the hero, with a pause button.
 //   3. The header gets more compact once you scroll down.
 //   4. The nav highlights the section you're reading.
+//   5. Diagrams (project pages): arrows draw themselves, then dots or a walk loop.
+//   6. The demo video: a Pause button, and no autoplay under reduced motion.
 // (The ⌘K command menu has its own file: command-menu.js.)
 //
 // The golden rule here is "progressive enhancement": the HTML already contains
@@ -208,3 +210,128 @@ if (tracked.length && "IntersectionObserver" in window) {
     }).observe(footer);
   }
 }
+
+// ---------------------------------------------------------------------------
+// 5. Diagrams
+// ---------------------------------------------------------------------------
+// Lisp drew the whole picture (DIAGRAM-SVG in pages.lisp). Without JS it's
+// simply complete. Here we play it in three steps:
+//   1. When the diagram scrolls into view, add .is-drawn: the CSS fades the
+//      boxes in and draws the arrows one after another.
+//   2. Once they're drawn (data-draw-ms, computed by Lisp from the number of
+//      arrows), start what loops: the dots on the pipeline (<animateMotion>
+//      elements inside the SVG, which wait for beginElement()) and the walk.
+//   3. Keep it pausable: the Pause button, and an automatic pause while the
+//      diagram is off screen, so nothing runs where nobody is looking.
+// SVG animations have their own switch on each <svg>: pauseAnimations() and
+// unpauseAnimations(). The walk is a JS loop, paused the way the terminal is.
+
+function setupDiagram(figure) {
+  const svgs = [...figure.querySelectorAll("svg")];
+  const button = figure.querySelector("[data-diagram-toggle]");
+  const animations = [...figure.querySelectorAll("animateMotion, animate")];
+  // The walk's steps are numbered 0, 1, 2… in data-walk (on boxes, lines, list items).
+  const numbers = [...figure.querySelectorAll("[data-walk]")].map((el) => Number(el.dataset.walk));
+  const steps = numbers.length ? Math.max(...numbers) + 1 : 0;
+
+  if (reduceMotion || !("IntersectionObserver" in window)) {
+    figure.classList.add("is-drawn"); // complete and still; the button stays hidden
+    return;
+  }
+
+  let paused = false;   // the button
+  let onScreen = false; // the observer below
+  const running = () => !paused && onScreen;
+
+  function sync() {
+    for (const svg of svgs) {
+      if (running()) svg.unpauseAnimations();
+      else svg.pauseAnimations();
+    }
+  }
+
+  // Like the terminal's wait(): sleeps, then keeps waiting while not running.
+  async function wait(ms) {
+    await sleep(ms);
+    while (!running()) await sleep(100);
+  }
+
+  // Step S of the walk: its line draws first (a CSS transition), then its box
+  // and its item in the list light up.
+  async function walk() {
+    while (true) {
+      for (let s = 0; s < steps; s++) {
+        const parts = [...figure.querySelectorAll(`[data-walk="${s}"]`)];
+        const lines = parts.filter((el) => el.classList.contains("walk-line"));
+        lines.forEach((el) => el.classList.add("is-lit"));
+        if (lines.length) await wait(650);
+        parts.forEach((el) => el.classList.add("is-lit"));
+        await wait(900);
+      }
+      await wait(2600); // time to read the whole path
+      figure.querySelectorAll(".is-lit").forEach((el) => el.classList.remove("is-lit"));
+      await wait(1400);
+    }
+  }
+
+  function start() {
+    if (!button) return; // nothing loops in this diagram
+    button.hidden = false;
+    animations.forEach((a) => a.beginElement());
+    sync();
+    if (steps > 0) walk();
+  }
+
+  if (button) {
+    button.addEventListener("click", () => {
+      paused = !paused;
+      button.textContent = paused ? "Play" : "Pause";
+      button.setAttribute("aria-label", paused ? "Play animation" : "Pause animation");
+      sync();
+    });
+  }
+
+  new IntersectionObserver(
+    ([entry]) => {
+      onScreen = entry.isIntersecting;
+      if (onScreen && !figure.classList.contains("is-drawn")) {
+        figure.classList.add("is-drawn");
+        setTimeout(start, Number(figure.dataset.drawMs) || 0);
+      }
+      sync();
+    },
+    { threshold: 0.3 }
+  ).observe(figure);
+}
+
+document.querySelectorAll("[data-diagram]").forEach(setupDiagram);
+
+// ---------------------------------------------------------------------------
+// 6. The demo video
+// ---------------------------------------------------------------------------
+// The HTML asks for autoplay (muted, looping) and shows the browser's controls,
+// so without JS you can still stop it. With JS we swap the controls for a small
+// Pause button like the diagrams'. Under reduced motion we cancel the autoplay
+// and keep the controls: the video plays only when you press play.
+
+document.querySelectorAll("[data-demo-video]").forEach((video) => {
+  const button = video.parentElement.querySelector("[data-demo-toggle]");
+
+  if (reduceMotion || !button) {
+    video.autoplay = false;
+    video.pause();
+    return;
+  }
+
+  video.controls = false;
+  button.hidden = false;
+  const label = () => {
+    button.textContent = video.paused ? "Play" : "Pause";
+    button.setAttribute("aria-label", video.paused ? "Play video" : "Pause video");
+  };
+  video.addEventListener("play", label);
+  video.addEventListener("pause", label);
+  // play() returns a promise that fails if the browser refuses; then it stays paused.
+  button.addEventListener("click", () => (video.paused ? video.play().catch(label) : video.pause()));
+  label();
+});

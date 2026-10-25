@@ -109,6 +109,11 @@ animation stays short.")
              ("~4,500" "geopolitical and central-bank events")
              ("880" "daily price points")
              ("6 months" "of events and prices, Feb–Jul 2026"))
+     ;; A screen recording of the demo. It only appears once static/event-market.mp4
+     ;; exists (README, "Add the demo video"); until then the page has no video.
+     :video (:file "event-market.mp4"
+             :poster "event-market-poster.jpg"
+             :caption "A screen recording of the public demo, replaying a recorded agent run.")
      ;; Each section is (heading paragraph paragraph ...).
      :sections
      (("The question"
@@ -121,7 +126,39 @@ animation stays short.")
        "Events come from GDELT and from central-bank rate decisions; prices come from FRED. The API computes correlations, candidate events for a move, shortest paths and PageRank. A LangGraph agent answers questions in plain English and shows the graph paths and the Cypher it used.")
       ("Safety by design"
        "Every correlation is labelled a hypothesis, never a cause. Asked to \"delete all the events\", the model wrote a DELETE query; it was rejected before reaching Neo4j, which the API opens read-only anyway."
-       "The public demo is a replay-only build with no backend, so nothing on it can reach the API, the model or the database.")))
+       "The public demo is a replay-only build with no backend, so nothing on it can reach the API, the model or the database."))
+     ;; The schema as a picture, drawn by pages.lisp (DIAGRAM-SVG):
+     ;;   :at (column row)    where a box sits on a grid; here rows run top to
+     ;;                       bottom, like the frontend: markets, days, events
+     ;;   (a -> b "LABEL")    an arrow from box a to box b
+     ;; The names are the real ones from the project's graph contract.
+     :diagram
+     (:heading "The graph"
+      :after "How it works"
+      :flow :down
+      :title "Event-Market Graph schema"
+      :caption "Six of the graph's eight node labels, with their real relationship names."
+      :nodes ((series  :at (1 0) :label "PriceSeries" :note "VIX, Brent, WTI…")
+              (claim   :at (0 1) :label "Claim" :note "proposed relation")
+              (day     :at (1 1) :label "TradingDay" :note "one node per date")
+              (event   :at (1 2) :label "Event" :note "GDELT · Fed · ECB")
+              (country :at (0 3) :label "Country" :note "ISO alpha-3")
+              (theme   :at (2 3) :label "Theme" :note "CAMEO · monetary"))
+      ;; :label-at moves a label along its arrow (0 = start, 1 = end; 0.5 if
+      ;; not given) when it would sit on top of another one.
+      :edges ((series -> day "PRICE_ON")
+              (event -> day "ON_DAY")
+              (event -> theme "HAS_THEME" :label-at 0.25)
+              (event -> country "OCCURRED_IN" :label-at 0.25)
+              (theme -> series "CORRELATES_WITH")
+              (claim -> series "ABOUT_SERIES" :label-at 0.3)
+              (claim -> event "ABOUT_EVENT" :label-at 0.3))
+      ;; An example walk, lit up one step at a time like the agent in the frontend.
+      ;; It shows the kind of path the agent follows; it is not real data.
+      :walk ((series "A move in a price series, say the VIX")
+             (day "the TradingDay it happened on")
+             (event "the events linked to that day")
+             (theme "and the Theme of each event"))))
     (:name "Internship Radar"
      :slug "internship-radar"
      :url "https://github.com/victorhenz241-eng/intership_finder"
@@ -142,7 +179,41 @@ animation stays short.")
        "The automations write, the app updates a few columns, and nothing is ever deleted: a dismissed role stays in the table so the next night's sweep doesn't add it back."
        "The LinkedIn part stays manual. The app prepares text and tracks threads, but never sends a message, never connects and never fetches a LinkedIn page, because automating LinkedIn gets accounts restricted.")
       ("Stack"
-       "Self-hosted n8n in Docker on a Google Cloud VM behind Caddy, a Rust dedup service, Groq for the LLM, Supabase (Postgres, auth, row-level security) and Next.js on Vercel.")))
+       "Self-hosted n8n in Docker on a Google Cloud VM behind Caddy, a Rust dedup service, Groq for the LLM, Supabase (Postgres, auth, row-level security) and Next.js on Vercel."))
+     ;; The architecture as a picture, drawn by pages.lisp (DIAGRAM-SVG):
+     ;;   :at (column row)    where a box sits on a grid; columns run left to right
+     ;;   (a -> b "label")    an arrow from box a to box b, with what travels on it
+     ;;   (a <-> b "label")   an arrow both ways
+     ;; Arrows are drawn in the order written, so the list reads as the flow.
+     ;; :pulse is the main pipeline: small dots travel along it, box to box.
+     :diagram
+     (:heading "Architecture"
+      :after "What I built"
+      :flow :right
+      :title "Internship Radar architecture"
+      :caption "Simplified from the architecture map in the project's README."
+      :nodes ((listings :at (0 0) :label "SimplifyJobs" :note "~16k postings")
+              (boards   :at (0 1) :label "Job-board APIs" :note "Greenhouse, Lever")
+              (sweep    :at (1 0) :label "Sweep" :note "n8n · daily 02:00")
+              (enrich   :at (1 1) :label "Enrich" :note "n8n · every 3 h")
+              (dedup    :at (1 2) :label "Dedup" :note "n8n · daily 02:30")
+              (groq     :at (2 0) :label "Groq LLM" :note "gpt-oss-120b")
+              (db       :at (2 1) :label "Postgres" :note "Supabase · RLS")
+              (rust     :at (2 2) :label "Rust dedup" :note "Docker, same VM")
+              (app      :at (3 1) :label "Next.js app" :note "on Vercel")
+              (bot      :at (3 2) :label "Telegram bot" :note "n8n · AI agent"))
+      :edges ((listings -> sweep "JSON")
+              (boards -> enrich "job text")
+              (sweep -> groq "score")
+              (enrich -> groq)
+              (sweep -> db "insert")
+              (enrich -> db "eligibility")
+              (dedup <-> rust "all rows")
+              (dedup -> db "groups")
+              (db -> app "roles")
+              (app -> groq "drafts")
+              (db -> bot "reads"))
+      :pulse (listings sweep db app)))
     (:name "EFC Tracker"
      :url nil                           ; private: private repo
      :summary "Built and deployed a progressive web app for the ESSEC Football Club's 9-week conditioning program, with iOS push reminders. Now extending it to the whole club."

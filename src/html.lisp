@@ -16,6 +16,8 @@
 ;;;;   - NIL children are skipped (handy with WHEN), plain lists are flattened
 ;;;;     (handy with MAPCAR)
 ;;;;   - (:raw "<b>hi</b>") inserts HTML without escaping — use sparingly
+;;;;   - names come out lowercase (:viewBox -> viewbox), except the few SVG names
+;;;;     listed in *MIXED-CASE-NAMES*, which keep their capitals (viewBox)
 ;;;;
 ;;;; Later, you can swap this for the Spinneret library, which uses almost the
 ;;;; same syntax. Writing it yourself first is the better lesson.
@@ -25,6 +27,23 @@
 (defparameter *void-elements*
   '(:area :base :br :col :embed :hr :img :input :link :meta :source :track :wbr)
   "Elements that never have a closing tag.")
+
+(defparameter *mixed-case-names*
+  '("viewBox" "pathLength" "preserveAspectRatio"
+    "animateMotion" "attributeName" "repeatCount" "calcMode" "keyPoints" "keyTimes")
+  "SVG names that have capital letters. HTML ignores case, but SVG comes from XML,
+which doesn't: there, viewbox and viewBox are two different names. The Lisp reader
+upcases every symbol (:viewBox is read as :VIEWBOX), so the capitals are already
+gone when RENDER sees the keyword. Browsers repair these names when they read an
+HTML page, but writing them correctly keeps the SVG valid anywhere, for example if
+you copy it into its own .svg file.")
+
+(defun markup-name (keyword)
+  "The name to write for a tag or attribute keyword: :DIV -> \"div\",
+:VIEWBOX -> \"viewBox\". STRING-EQUAL compares text ignoring case."
+  (let ((name (string-downcase (symbol-name keyword))))
+    (or (find name *mixed-case-names* :test #'string-equal)
+        name)))
 
 (defun escape (string)
   "Replace the characters that have a meaning in HTML."
@@ -47,7 +66,7 @@
 (defun render-attributes (attributes out)
   (loop for (name value) on attributes by #'cddr
         when value
-          do (format out " ~(~a~)" name)          ; ~( ~) lowercases :data-x -> data-x
+          do (format out " ~a" (markup-name name))   ; :data-x -> data-x
              (unless (eq value t)
                (format out "=\"~a\"" (escape (princ-to-string value))))))
 
@@ -61,12 +80,12 @@
         ((and (consp node) (keywordp (first node)))
          (let ((tag (first node)))
            (multiple-value-bind (attributes children) (split-attributes (rest node))
-             (format out "<~(~a~)" tag)
+             (format out "<~a" (markup-name tag))
              (render-attributes attributes out)
              (write-string ">" out)
              (unless (member tag *void-elements*)
                (dolist (child children) (render child out))
-               (format out "</~(~a~)>" tag)))))
+               (format out "</~a>" (markup-name tag))))))
         ((consp node) (dolist (child node) (render child out)))
         (t (error "Don't know how to render ~s" node))))
 

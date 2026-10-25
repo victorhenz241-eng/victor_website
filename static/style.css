@@ -9,6 +9,7 @@
  *   1. Tokens (variables)   2. Base   3. Header   4. Hero   5. Terminal
  *   6. Sections & timeline  7. Cards  8. Contact & footer  9. MOTION
  *   10. Command menu (⌘K)   11. Source view ((λ) source)
+ *   12. Diagrams & the demo video
  */
 
 /* ---------- 1. Tokens ---------- */
@@ -808,6 +809,157 @@ kbd {
 .source.is-entering .source-chunk { opacity: 0; }
 .view-rendered.is-entering { opacity: 0; transform: translateY(6px); }
 
+/* ---------- 12. Diagrams and the demo video ----------
+ *
+ * The SVG comes from Lisp (DIAGRAM-SVG in pages.lisp). Its colors come from here,
+ * through the same tokens as the rest of the page, so dark mode just works.
+ * Contrast: lines and box borders use --muted (about 5.9:1 on the light page,
+ * 7:1 on the dark one; shapes need 3:1), text uses --text and --muted (4.5:1+).
+ *
+ * The motion, in three steps (motion.js starts each one):
+ *   1. .is-drawn  : boxes fade in column by column, then every arrow draws
+ *                   itself in the order of the data (stroke-dashoffset, below)
+ *   2. the pulse  : dots travel along the main pipeline (<animateMotion> in the SVG)
+ *   3. the walk   : .is-lit lights the boxes and lines of the example walk
+ * Without JS, or with reduced motion, the picture is simply complete and still.
+ */
+
+.diagram { margin: 0; }
+.diagram-frame {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+  padding: var(--s3) var(--s2);
+}
+.diagram-svg { display: block; width: 100%; height: auto; margin: 0 auto; overflow: visible; }
+
+/* Two pictures, one shown: the wide one, or under 48rem the narrow one that
+   flows top to bottom. display:none also hides the other from screen readers. */
+.diagram-narrow { display: none; max-width: 26rem; }
+@media (max-width: 48rem) {
+  .diagram-wide { display: none; }
+  .diagram-narrow { display: block; }
+  .diagram-frame { padding: var(--s2) var(--s1); }
+}
+
+.node rect { fill: var(--surface); stroke: var(--muted); stroke-width: 1; }
+.node-label { font-family: var(--font-body); font-size: 13px; font-weight: 500; fill: var(--text); text-anchor: middle; }
+.node-note { font-family: var(--font-mono); font-size: 10.5px; fill: var(--muted); text-anchor: middle; }
+
+.edge-line { fill: none; stroke: var(--muted); stroke-width: 1.25; }
+.edge-head { fill: var(--muted); }
+.edge-label rect { fill: var(--bg); }
+.edge-label text {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  fill: var(--muted);
+  text-anchor: middle;
+}
+.diagram-narrow .edge-label text, .diagram-narrow .node-note { font-size: 10px; }
+
+.pulse-dot { fill: var(--text); }
+
+/* The walk: a thicker ink line drawn over the arrow, and the box gets an ink border. */
+.walk-line { fill: none; stroke: var(--text); stroke-width: 2.25; stroke-linecap: round;
+             stroke-dasharray: 1 1; stroke-dashoffset: 1; }
+.walk-line.is-lit { stroke-dashoffset: 0; }
+.node rect { transition: stroke 0.3s, stroke-width 0.3s, fill 0.3s; }
+.node.is-lit rect { stroke: var(--text); stroke-width: 2; fill: var(--bg); }
+
+/* Step 1, drawing. pathLength="1" (set in Lisp) makes every arrow 1 unit long,
+   whatever its real length. A dash pattern of "1 on, 1 off" shifted by 1
+   (stroke-dashoffset: 1) shows only the gap: the line is invisible. Going to 0
+   slides the dash in from the start, so the line seems to draw itself.
+   --i (the arrow's place in the data) delays each one by 110ms. */
+.js .diagram .edge-line { stroke-dasharray: 1 1; stroke-dashoffset: 1; }
+.js .diagram .edge-head,
+.js .diagram .edge-label,
+.js .diagram .node { opacity: 0; }
+
+.js .diagram.is-drawn .edge-line {
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 0.8s var(--ease) calc(300ms + var(--i, 0) * 110ms);
+}
+.js .diagram.is-drawn .edge-head,
+.js .diagram.is-drawn .edge-label {
+  opacity: 1;
+  transition: opacity 0.3s var(--ease) calc(800ms + var(--i, 0) * 110ms);
+}
+.js .diagram.is-drawn .node {
+  opacity: 1;
+  transition: opacity 0.5s var(--ease) calc(var(--i, 0) * 120ms);
+}
+.walk-line { transition: stroke-dashoffset 0.7s var(--ease); }
+
+.diagram-caption {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s2);
+  margin-top: var(--s1);
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+.diagram-caption a { color: var(--text); }
+
+/* The pause button: the terminal's, in the page's colors. */
+.diagram-toggle {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.125rem 0.5rem;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+.diagram-toggle:hover { color: var(--text); border-color: var(--faint); }
+.diagram-toggle[hidden] { display: none; }
+
+/* The walk's steps, as a real list under the picture. motion.js marks the
+   current step; without JS it's just a readable list. */
+.walk-steps { margin-top: var(--s3); font-size: 0.9375rem; }
+.walk-title {
+  margin: 0 0 var(--s1);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.walk-steps ol { margin: 0; padding-left: 1.5rem; color: var(--muted); }
+.walk-steps li { transition: color 0.3s; }
+.walk-steps li::marker { font-family: var(--font-mono); font-size: 0.8125rem; }
+.walk-steps li.is-lit { color: var(--text); }
+
+.diagram-text { margin-top: var(--s2); font-size: 0.875rem; color: var(--muted); }
+.diagram-text summary { cursor: pointer; width: fit-content; }
+.diagram-text summary:hover { color: var(--text); }
+.diagram-text p {
+  margin: var(--s2) 0 0.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.diagram-text ul { margin: 0; padding-left: 1.25rem; }
+
+/* The demo video, right under the case study's header. width/height on the
+   <video> (from Lisp) give it its shape before it loads: no jump. */
+.demo { margin: 0 0 var(--s6); }
+.demo-frame { position: relative; }
+.demo-video {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.demo-toggle { position: absolute; right: var(--s1); bottom: var(--s1); }
+
 /* People who ask their OS for less motion get none. Always include this. */
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
@@ -815,4 +967,7 @@ kbd {
     animation: none !important;
     transition: none !important;
   }
+  /* Diagrams: complete from the start, even before motion.js runs. */
+  .js .diagram .edge-line { stroke-dashoffset: 0; }
+  .js .diagram .edge-head, .js .diagram .edge-label, .js .diagram .node { opacity: 1; }
 }
