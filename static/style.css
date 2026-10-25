@@ -511,6 +511,31 @@ kbd {
   color: var(--muted);
 }
 
+/* Build stats: the footer's last line, measured by the build (src/stats.lisp).
+   Labels stay muted, the numbers get the ink color: quiet, but scannable.
+   The dots: each item starts with a 1.5em "·". The list is pulled 1.5em to the
+   left and its wrapper hides what sticks out, so the dot that would start a new
+   line is clipped. That way the line wraps cleanly on a phone. */
+.build-stats { flex-basis: 100%; overflow: hidden; }
+.build-stats ul {
+  display: flex;
+  flex-wrap: wrap;
+  row-gap: 0.25rem;
+  margin: 0 0 0 -1.5em;
+  padding: 0;
+  list-style: none;
+}
+.build-stats li { white-space: nowrap; }
+.build-stats li::before {
+  content: "·";
+  content: "·" / "";          /* the "/ """ part: nothing for screen readers to say */
+  display: inline-block;
+  width: 1.5em;
+  text-align: center;
+  color: var(--faint);
+}
+.build-stats b { font-weight: 400; color: var(--text); }
+
 /* ---------- 9. MOTION ----------
  *
  * How the scroll reveal works, in three steps:

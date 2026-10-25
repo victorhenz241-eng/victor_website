@@ -1,4 +1,5 @@
-;;;; build.lisp — writes every page plus the static/ folder into public/.
+;;;; build.lisp — writes every page plus the static/ folder into public/,
+;;;; and measures the render time shown in each footer (see stats.lisp).
 
 (in-package #:victor-site)
 
@@ -38,9 +39,28 @@
                                             (and (equal (car (last (pathname-directory dir))) "public")
                                                  (uiop:subpathp dir (project-root))))
                                 :if-does-not-exist :ignore))
-  (maphash (lambda (path page)
-             (write-file (output-path path) (html (funcall page))))
-           *pages*)
+  ;; Render every page, timing it, then fill in the numbers and write the files.
+  ;; What the footer's "rendered in N ms" covers: building each page's tree and
+  ;; turning it into HTML text (reading the source files for the source view
+  ;; included). Not SBCL starting up, not compiling, not writing files.
+  ;; The numbers known in advance go in *BUILD-STATS* (see stats.lisp) first,
+  ;; so counting lines doesn't end up inside the timing.
+  (let* ((stats (list :lisp (lisp-version)
+                      :lines (lines-of-lisp)
+                      :pages (hash-table-count *pages*)
+                      :date (today-utc)))
+         (start (get-internal-real-time))
+         ;; LET gives the special variable *BUILD-STATS* this value only while
+         ;; the pages render. Each element is (path . html-text).
+         (rendered (let ((*build-stats* stats))
+                     (loop for path being the hash-keys of *pages* using (hash-value page)
+                           collect (cons path (html (funcall page))))))
+         (ms (milliseconds-since start)))
+    (loop for (path . page) in rendered
+          do (write-file (output-path path)
+                         (fill-in-page-size
+                          (fill-in page *render-ms-marker* (format nil "~:d" ms)))))
+    (format t "~&Rendered ~d pages in ~d ms~%" (length rendered) ms))
   (let ((static (merge-pathnames "static/" (project-root))))
     (dolist (file (directory (merge-pathnames "**/*.*" static)))
       (unless (uiop:directory-pathname-p file)
