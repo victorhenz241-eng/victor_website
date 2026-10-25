@@ -54,12 +54,14 @@ to see what this macro actually writes for you."
 (defun site-header ()
   `(:header :class "site-header"
      (:div :class "page header-inner"
-      (:a :class "wordmark" :href "#top" ,*name*)
+      ;; "./#about" instead of "#about": from a project page, "#about" would look
+      ;; for an #about on *that* page. "./" always means the home page.
+      (:a :class "wordmark" :href "./" ,*name*)
       (:nav
-       (:a :href "#about" "About")
-       (:a :href "#work" "Work")
-       (:a :href "#projects" "Projects")
-       (:a :href "#contact" "Contact")))))
+       (:a :href "./#about" "About")
+       (:a :href "./#work" "Work")
+       (:a :href "./#projects" "Projects")
+       (:a :href "./#contact" "Contact")))))
 
 (defun layout (&key title description body)
   `(:html :lang "en"
@@ -139,13 +141,45 @@ entries arrive one after another (that's what the index in STAGGER is for)."
                   (:p :class "meta" ,org ,(when place (list " · " place)))
                   ,(when summary `(:p ,summary)))))))
 
+(defun case-study-path (slug)
+  "The file a project's page is written to: \"internship-radar\" -> \"internship-radar.html\"."
+  (format nil "~a.html" slug))
+
 (defun project-card (i project)
-  (destructuring-bind (&key name url summary tags) project
+  ;; &allow-other-keys: the plist also has :stats, :sections... that the card ignores.
+  (destructuring-bind (&key name slug url summary tags &allow-other-keys) project
     `(:li :class "card" :data-reveal t :style ,(stagger i)
-       (:h3 ,(if url `(:a :href ,url ,name (:span :class "arrow" " ↗")) name))
+       (:h3 ,(cond (slug `(:a :href ,(case-study-path slug) ,name (:span :class "arrow" " →")))
+                   (url `(:a :href ,url ,name (:span :class "arrow" " ↗")))
+                   (t name)))
        (:p ,summary)
        (:ul :class "tags"
         ,@(mapcar (lambda (tag) `(:li ,tag)) tags)))))
+
+(defun case-study (project)
+  "A full page for one project: a header with its numbers and links, then one
+numbered section per part of the story. Returns a list of trees, one per block."
+  (destructuring-bind (&key name summary tags links stats sections &allow-other-keys) project
+    `((:div :class "hero case-hero"
+        (:p :class "eyebrow" :data-reveal t :style ,(stagger 0)
+         (:a :class "back" :href "./#projects" "← All work"))
+        (:h1 :data-reveal t :style ,(stagger 1) ,name)
+        (:p :class "intro" :data-reveal t :style ,(stagger 2) ,summary)
+        (:div :data-reveal t :style ,(stagger 3)
+         (:ul :class "tags" ,@(mapcar (lambda (tag) `(:li ,tag)) tags))
+         (:ul :class "links"
+          ,@(loop for (label url) in links
+                  collect `(:li (:a :class "pill" :href ,url ,label " ↗")))))
+        (:ul :class "stats" :data-reveal t :style ,(stagger 4)
+         ,@(loop for (value label) in stats
+                 collect `(:li (:strong ,value) (:span ,label)))))
+      ;; (heading . paragraphs) splits ("How it works" "p1" "p2") into the
+      ;; first element and the rest of the list.
+      ,@(loop for (heading . paragraphs) in sections
+              for n from 1
+              collect (section (format nil "part-~d" n) n heading
+                               `(:div :class "prose" :data-reveal t
+                                  ,@(mapcar (lambda (p) `(:p ,p)) paragraphs)))))))
 
 ;;; ------------------------------------------------------------------
 ;;; Pages
@@ -168,6 +202,12 @@ entries arrive one after another (that's what the index in STAGGER is for)."
            `(:div :class "contact" :data-reveal t
               (:p :class "contact-line" ,*contact-line*)
               ,(link-list))))
+
+;;; One page per project that has a :slug.
+;;;
+;;; TODO(human): for each project in *projects* that has a :slug, register a page with
+;;; DEFPAGE. Its path is (case-study-path slug), its :title the project's name, its
+;;; :description the summary, and its body (case-study project).
 
 (defpage "404.html" (:title "Not found")
   `(:div :class "hero"
