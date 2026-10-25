@@ -29,6 +29,15 @@
 
 (defun build ()
   "Generate the whole site into public/. Call this from the REPL after every change."
+  ;; Start from an empty public/, so a page you renamed or removed doesn't linger.
+  ;; :validate is a safety net: delete only a folder named "public" that sits inside
+  ;; this project. :if-does-not-exist :ignore makes the very first build fine.
+  (let ((public (output-path "")))
+    (uiop:delete-directory-tree public
+                                :validate (lambda (dir)
+                                            (and (equal (car (last (pathname-directory dir))) "public")
+                                                 (uiop:subpathp dir (project-root))))
+                                :if-does-not-exist :ignore))
   (maphash (lambda (path page)
              (write-file (output-path path) (html (funcall page))))
            *pages*)

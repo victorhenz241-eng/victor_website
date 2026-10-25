@@ -75,10 +75,11 @@ Nothing needs restarting. Things to try:
 
 ## 5. Put it online (GitHub Pages)
 
-1. Create a repo called `victor-site` on GitHub and push this folder to `main`.
+1. Create a repo called `victor_website` on GitHub and push this folder to `main`.
+   (If you pick another name, change `*base-path*` in `content.lisp`: the 404 page uses it.)
 2. In the repo, go to **Settings → Pages → Source** and pick **GitHub Actions**.
 3. Each push now builds and publishes the site. The first time, it shows up at
-   `https://victorhenz241-eng.github.io/victor-site/`.
+   `https://victorhenz241-eng.github.io/victor_website/`.
 
 ## 6. Your own domain
 
@@ -92,7 +93,7 @@ Nothing needs restarting. Things to try:
 **Content:** fill in every `TODO` in `content.lisp`, especially `*repl*`, since that's the first thing people see move.
 
 **Lisp**
-- [ ] Generate one page per project from `*projects*` (add a `:slug`).
+- [x] Generate one page per project from `*projects*` (add a `:slug`).
 - [ ] Render blog posts from files in `posts/`.
 - [ ] Swap `html.lisp` for the Spinneret library and compare the two.
 
