@@ -3,6 +3,159 @@
 This guide explains every effect on the site in plain language first, then shows
 where the code lives. Read it alongside the files.
 
+## Start here: a tour of the code
+
+The whole site is about 1,800 lines of Lisp and 700 lines of JavaScript. You can
+read all of it. This is a good order, with what to look for in each file.
+
+| # | File | What it does | Read it for |
+|---|---|---|---|
+| 1 | `victor-site.asd`, `src/package.lisp` | which files make up the project, in which order; the package they live in | ASDF, packages |
+| 2 | `src/html.lisp` | turns Lisp lists into HTML text (~60 lines) | recursion, `cond`, streams |
+| 3 | `src/content.lisp` | every sentence on the site, as data | plists, quoted lists |
+| 4 | `src/pages.lisp` | the layout, the building blocks, the diagrams, the pages | backquote, `loop`, `destructuring-bind`, the `defpage` macro |
+| 5 | `src/build.lisp` | renders every page and writes `public/` | files, timing, special variables |
+| 6 | `src/stats.lisp` | the footer's measured numbers | fixed-point iteration, bytes vs characters |
+| 7 | `src/source.lisp` | the "(λ) source" view: cuts the real Lisp out of its own files and colors it | `read`, `file-position`, a tokenizer |
+| 8 | `static/style.css` | every color, size and transition | custom properties, transitions vs keyframes |
+| 9 | `static/motion.js` | scroll reveal, terminal, header, nav, diagrams, video | IntersectionObserver, async/await, promises |
+| 10 | `static/command-menu.js` | the ⌘K menu | `<dialog>`, the ARIA combobox |
+| 11 | `static/source-view.js` | the "(λ) source" switch | `<template>`, localStorage |
+
+A good first session: build once, open `public/index.html` in an editor next to
+`src/pages.lisp`, and find the Lisp that wrote each part of the HTML.
+
+### The concepts, one by one
+
+Each one is used somewhere real in this project. The function names are the
+places to look (search for them in the file).
+
+**Lisp**
+
+- **Packages and ASDF.** A *package* is a namespace: `victor-site::build` and some
+  other library's `build` can't clash. ASDF is Lisp's build tool: the `.asd` file
+  lists the source files and loads them in order. → `src/package.lisp`,
+  `victor-site.asd`, `make.lisp`.
+- **Lists as HTML.** `(:a :href "x" "text")` is plain data. `render` walks it and
+  writes `<a href="x">text</a>`. → `render` in `src/html.lisp`.
+- **Backquote, comma, comma-at.** `` `(:p ,x) `` is a template: the list is copied
+  as written, except `,x`, which is replaced by the value of `x`. `,@list` splices
+  a list's elements in, without the outer parentheses. → almost every function in
+  `src/pages.lisp`, e.g. `site-header` and `timeline`.
+  ([Practical Common Lisp, ch. 3](https://gigamonkeys.com/book/practical-a-simple-database.html))
+- **Plists.** A *property list* alternates keys and values: `(:role "Intern" :org "Canal+")`.
+  `(getf plist :org)` reads one value. Every entry in `content.lisp` is one. →
+  `*experience*`, `*projects*` in `src/content.lisp`; `getf` in `commands`.
+- **`destructuring-bind` with `&key` and `&allow-other-keys`.** It takes a plist apart
+  into variables in one go: `(destructuring-bind (&key role org &allow-other-keys) entry ...)`.
+  `&key` names the keys you want; `&allow-other-keys` says "the plist may have more
+  keys, ignore them" (without it, an unexpected key is an error, which is a useful
+  safety net). → `timeline` (strict) and `project-card` (relaxed) in `src/pages.lisp`.
+- **`loop`.** Lisp's loop has its own small language: `for x in list`, `for i from 0`,
+  `collect`, `when`, and destructuring like `for (label url) in *links*`. →
+  `numbered`, `commands`, `link-list` in `src/pages.lisp`.
+  ([PCL, ch. 22](https://gigamonkeys.com/book/loop-for-black-belts.html))
+- **Local functions: `flet` and `labels`.** Small helpers that exist only inside
+  one function. `labels` lets them call each other. → `diagram-svg` (`center`,
+  `route`, `label-box`...) and `highlight` in `src/source.lisp`.
+- **Several return values.** A function can return more than one value with
+  `values`; `multiple-value-bind` catches them. → `split-attributes` in
+  `src/html.lisp`, `case-study-sources` and `case-study`.
+- **Closures, and why the pages use `mapc`.** A `lambda` remembers the variables
+  around it (it *closes over* them). Each project page is a stored `lambda` that
+  remembers its `project`. With `dolist` all the lambdas would share one variable
+  and every page would show the last project; `mapc` calls a fresh function for
+  each project, so each lambda gets its own. → the `mapc` near the end of
+  `src/pages.lisp`.
+- **Macros: `defpage`.** A macro is a function that runs *before* your code is
+  compiled and returns new code to put in its place. `defpage` turns a short page
+  definition into "store a lambda that calls `layout`". It uses `gensym` for a
+  helper variable, so the name can't clash with yours. Try
+  `(macroexpand-1 '(defpage "x.html" (:title "X") '(:p "hi")))` in the REPL.
+  → `defpage` in `src/pages.lisp`. ([PCL, ch. 8](https://gigamonkeys.com/book/macros-defining-your-own.html))
+- **Special variables and `let`.** A variable made with `defvar`/`defparameter` is
+  *special*: a `let` around a call gives it a new value for everything that call
+  does, however deep, then restores the old value. `build` binds `*build-stats*`
+  this way and `layout` reads it without being passed anything. → `*build-stats*`
+  in `src/stats.lisp`, `build` in `src/build.lisp`.
+  ([PCL, ch. 6](https://gigamonkeys.com/book/variables.html))
+- **`read` and `file-position`.** `read` turns text into a Lisp form; noting the
+  stream's position before and after tells you exactly which characters it took.
+  That's how the source view cuts out the real text of a form. → `form-slices` in
+  `src/source.lisp` (LEARN Effect 9).
+- **A tokenizer.** Walking a string one character at a time and labelling runs of
+  characters ("this is a string", "this is a comment"). → `highlight`, then
+  `split-lines` and `code-line` in `src/source.lisp`.
+- **Fixed-point iteration.** The page's size is written inside the page, and writing
+  it changes the size. So: guess, measure, guess again with the measurement, until
+  the guess stops changing. → `fill-in-page-size` in `src/stats.lisp` (Effect 10).
+
+**Browser**
+
+- **Progressive enhancement.** The HTML is complete on its own; CSS and JS only add
+  to it. Turn JS off and nothing is missing. → the `.js` class at the top of
+  `motion.js`; the `hidden` buttons that JS reveals.
+- **CSS custom properties.** `--i: 3` on an element is a variable the stylesheet can
+  read with `var(--i)`. Lisp writes them (`stagger`), CSS does math with them
+  (`calc(var(--i) * 90ms)`). → section 9 of `style.css`.
+- **Transitions vs keyframes.** A transition animates a *change* (a class added);
+  `@keyframes` runs by itself. → `.js [data-reveal]` vs `@keyframes blink`.
+- **IntersectionObserver.** The browser tells you when an element enters or leaves
+  the screen, instead of you checking on every scroll. Used for the reveal, the
+  terminal, the header, the nav, the diagrams and the video. → `static/motion.js` (Effects 1, 3, 6, 7, 11, 12).
+- **async/await and promises.** A promise is a value that arrives later; `await`
+  pauses a function until it does, without freezing the page. → `play()` (the
+  terminal) and `gate()` in `motion.js` (Effect 3).
+- **`<dialog>`.** A native pop-up: `showModal()` traps the focus, closes on Esc and
+  dims the page. → `static/command-menu.js` (Effect 8).
+- **The ARIA combobox.** A text box that controls a list; the focus stays in the box
+  and `aria-activedescendant` says which option is selected. → `select` in
+  `command-menu.js`.
+- **SVG and `stroke-dashoffset`.** Lines that draw themselves: a dash as long as
+  the line, slid into view. → section 12 of `style.css` (Effect 11).
+- **localStorage with try/catch.** The browser's small per-site memory. It can
+  throw (private windows), so every use is wrapped. → `load`/`save` in
+  `static/source-view.js`.
+- **`prefers-reduced-motion`.** The OS setting "reduce motion". The CSS media query
+  at the end of `style.css` and `reduceMotion` at the top of `motion.js` honor it.
+
+### Exercises
+
+Small, real changes. Rebuild after each one (`sbcl --script make.lisp`) and look.
+
+1. **Add a third case study.** Give "EFC Tracker" a `:slug "efc-tracker"`, a
+   `:links` list, a few `:stats` and two or three `:sections`, in your own words
+   (only true facts: it's your CV). Rebuild: a new page appears, the card gets
+   an arrow, the ⌘K menu gets an entry, and its source view works. You wrote no
+   new code. Why? Follow `:slug` through `pages.lisp` to find out.
+2. **Add a box to a diagram.** In the Radar's `:diagram`, add
+   `(caddy :at (0 3) :label "Caddy" :note "HTTPS proxy")` and the arrow
+   `(caddy -> bot "webhook")`. Check the wide picture, the phone picture (narrow
+   window) and "The diagram as text". Then put two labels in the same gap and watch
+   one slide along its arrow.
+3. **Read a macro's output.** Run `(macroexpand-1 '(defpage "x.html" (:title "X") '(:p "hi")))`
+   in the REPL. Find `layout` in the result, and the `gensym` variable (a symbol
+   like `#:FILE123`). Then write a tiny page of your own with `defpage`.
+4. **Watch the fixed point.** Add `(format t "round ~d: ~d~%" round size)` inside
+   the loop of `fill-in-page-size`, rebuild, and read the rounds in the terminal.
+   Remove it afterwards.
+5. **Exaggerate the motion.** In `style.css`, change the reveal's `16px` to `60px`
+   and `90ms` to `300ms`. Reload, then bring them back. Do the same with the
+   diagram's `110ms`.
+6. **Teach the tokenizer numbers.** In `highlight` (`src/source.lisp`), color numbers
+   like `4.0` and `120` with a new class `c-num`, and give it a color in section 11
+   of the CSS (keep 4.5:1 contrast on `--surface`, see "Contrast, checked" below).
+7. **Think about a tokenizer bug.** In `(loop for (i item) in ...)`, the `i` is
+   colored like an operator, because it comes right after `(`. Can you think of a
+   rule that fixes this case? What would your rule break? (There's no perfect
+   answer without really parsing Lisp: that's the point of the exercise.)
+8. **Add a command to the ⌘K menu.** In `commands` (`pages.lisp`), add an action
+   `"copy-email"`, and in `command-menu.js` handle it with
+   `navigator.clipboard.writeText(...)` (it returns a promise: what should happen
+   if it fails?).
+
+---
+
 ## The big picture: three layers, three jobs
 
 ```
@@ -42,6 +195,13 @@ enters the screen, JavaScript adds a class to it, and CSS slides it smoothly int
 3. **JS flips the switch** (`motion.js`). An **IntersectionObserver** is a browser
    feature that calls your code when an element enters the screen. We add `is-visible`,
    the property changes, and the transition animates it.
+
+**A trap we fell into: `threshold`.** The observer's `threshold` is "how much of the
+element must be visible", as a fraction of the element. It used to be `0.15`. That
+sounds harmless, but a block taller than about seven screens can *never* be 15%
+visible, so it would never appear. Chrome even reports it as "not intersecting" the
+whole time. Now the threshold is `0` (any part of it) and the `rootMargin`
+(`-10%` at the bottom) gives the "a little after it appears" feel instead.
 
 **Why `.js` in front?** JS adds the class `js` to the page when it starts. If JS fails
 to load, `.js` never exists, nothing is hidden, and the content is still there.
@@ -89,9 +249,16 @@ line's text, empties the lines, and types them back one character at a time, in 
   means "pause 40ms here, without freezing the page". That's what `async`/`await` is for.
 - The rhythm is `28 + Math.random() * 45` ms per character. The randomness is what
   makes it feel like a person typing. Try a fixed `40` and compare.
-- **Pause button:** `wait()` keeps waiting while `paused` is true. If something moves
-  for more than 5 seconds, users should be able to stop it, as accessibility
-  guidelines (WCAG) require.
+- **Pause button:** if something moves for more than 5 seconds, users should be able
+  to stop it, as accessibility guidelines (WCAG) require. `wait()` sleeps, then
+  waits at a **gate** while the animation is paused or scrolled out of sight.
+- **The gate** (`gate()` in `motion.js`) is a small promise trick. `await
+  resume.pass()` continues at once when the animation may run. Otherwise it returns
+  a promise that isn't resolved yet, and the loop simply stops there: no timer, no
+  work. The promise's `resolve` function is kept in a list, and `resume.check()`
+  (called by the Pause button and by an IntersectionObserver) calls them all when
+  the animation may run again. An older version checked "am I still paused?" every
+  100ms, which kept a timer busy for nothing. The diagrams' walk uses the same gate.
 - **Blinking cursor:** this is a CSS **keyframes** animation (`@keyframes blink`). A
   transition waits for something to change. A keyframes animation runs by itself in a loop.
 
@@ -139,6 +306,13 @@ observer only calls you when the answer changes: once on the way down, once on t
 **Why not change `height`?** The header is part of the page flow, so a shorter header
 would pull the whole page up by 8px while you're reading. Moving it with `transform`
 changes nothing around it, and it's cheap to animate (see Effect 2).
+
+**The border's fallback.** At the top of the page the header's bottom border is
+hidden, and it fades in once you scroll. That hiding only happens once `motion.js`
+has added `.tracks-scroll` to the header, right after it starts watching the
+sentinel. In a browser without IntersectionObserver (or with JS off) the class never
+comes, so the border just stays. A rule like "hide it whenever JS runs" would have
+left those browsers with no border at all.
 
 **Try it:** make the sentinel `height: 30rem` so the header changes later, or remove
 `.header-inner`'s transform and watch the content stop being centred.
@@ -293,6 +467,25 @@ these shapes apart.
 
 The colors are gray steps plus one green for strings (the terminal's green, darker
 in light mode). Each was checked to keep 4.5:1 contrast on the panel, even the dim parens.
+
+**Long lines on a phone: a hanging indent.** In a `<pre>`, a line too long for the
+screen wraps back to the left edge, under the parens, and the shape of the code is
+lost. So `split-lines` cuts the colored pieces into lines (a docstring that spans
+several lines is cut too, each piece keeping its color), and `code-line` makes each
+line its own `<span style="--n:4">`, where `--n` is how many spaces the line starts
+with. The CSS turns that into a hanging indent:
+
+```css
+.source code > span {
+  display: block;
+  padding-left: calc((var(--n, 0) + 2) * 1ch);   /* push the whole line right */
+  text-indent: calc((var(--n, 0) + 2) * -1ch);   /* pull its first line back */
+}
+```
+
+The first line starts where it always did; the wrapped part sits two characters
+deeper than the line's start. `1ch` is the width of one character, and in a
+monospaced font every character has that width.
 
 **Step 4: hide it until asked.** `with-source` (in `source.lisp`) puts each panel in a
 `<template>` next to the section's content. The browser parses a template but never
@@ -451,6 +644,13 @@ repair the common ones when they read HTML, but we write them right anyway:
   curve starts and ends on the boxes and is pulled towards the two control points.
   Putting both control points halfway along the flow gives the soft S shape.
   `bezier-point` computes a point on the curve, which is where a label goes.
+- **Labels make room for each other.** A label wants the middle of its arrow (or
+  the spot `:label-at` asks for). But on the phone picture several arrows share one
+  gap, and their labels used to touch. So each label checks its rectangle
+  (`label-box`) against every box and every label already placed (`overlap-p`), and
+  if it would overlap, it slides along its *own* arrow to the first free spot. The
+  phone layout also has a little more room between rows (`:step 140` in
+  `*diagram-sizes*`).
 - An arrow longer than one step first runs straight along its lane (`L`), then bends
   in the last gap, so it never cuts through the boxes in between.
 
@@ -478,6 +678,12 @@ line seems to draw itself from its start:
 
 `--i` is the arrow's place in the data, so the arrows draw in the order you wrote
 them. That's why the edges list is written in flow order.
+
+**When it starts.** One observer watches for the figure reaching the middle half of
+the screen (`rootMargin: "-25% 0px -25% 0px"`) and then adds `.is-drawn`, once. A
+second one only asks "is any of it on screen?" and pauses the looping parts when
+it isn't. (A first version waited for "30% of the figure visible", which a figure
+taller than the screen may never reach.)
 The walk uses the same trick on a second, thicker line laid over the arrow.
 Each label sits on a small rect in the page color, which hides whatever line runs
 under it, the walk's line included. So the label of an arrow the walk follows gets
@@ -550,6 +756,61 @@ still shrinks, the nav still highlights, the menu still opens and the source vie
 still swaps. They just change
 instantly instead of animating.
 
+## Contrast, checked
+
+Contrast is the difference in lightness between a color and what's behind it, as a
+ratio from 1:1 (invisible) to 21:1 (black on white). The rules (WCAG AA): **text
+needs 4.5:1**; **shapes that carry meaning** (an arrow, a focus line, a border you
+need to see) **need 3:1**; pure decoration needs nothing. So each gray step has a job:
+
+| Token | Light | Dark | Used for | On `--bg` | On `--surface` |
+|---|---|---|---|---|---|
+| `--text` | `#0e1114` | `#e8eaed` | text | 18.2 / 15.7 | 16.8 / 14.5 |
+| `--muted` | `#5f646b` | `#9aa0a6` | secondary text, diagram lines | 5.7 / 7.2 | 5.3 / 6.6 |
+| `--faint` | `#838990` | `#666b72` | arrows ↗ →, focus line, dots, hover borders (never text) | 3.4 / 3.5 | 3.1 / 3.3 |
+| `--line` | `#e4e5e8` | `#23282d` | dividers and resting borders (decoration) | — | — |
+| `--code-dim` | `#686d74` | `#80868d` | parens and comments in the source view | — | 4.6 / 4.8 |
+| `--code-string` | `#2d6a3e` | `#9fd8a7` | strings in the source view | — | 5.7 / 10.7 |
+| `--term-dim` | `#7d848c` | same | the terminal's prompt (on `--term-bg`) | 5.0 / 5.2 | — |
+
+(Light / dark ratios.) `--faint` used to be lighter (2.3–2.9:1), which was too light
+for the arrows on the cards and the line under the ⌘K search box, so it was darkened
+just enough to pass 3:1 everywhere. The section numbers ("01", "02"...) used
+`--faint` too, but they're *text*, so they now use `--text`.
+
+**How the ratio is computed** (try it in Python or JS): for each color channel
+`c = value / 255`, then `c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4`;
+lightness `L = 0.2126 R + 0.7152 G + 0.0722 B`; ratio `(L1 + 0.05) / (L2 + 0.05)`,
+lighter color on top.
+
+## The `<head>`: what browsers and apps read
+
+`layout` in `pages.lisp` writes the same `<head>` on every page:
+
+- `<meta name="description">`: the snippet search engines show (every page has one,
+  the 404 too).
+- **Open Graph** (`og:title`, `og:description`, `og:type`, `og:site_name`) and
+  `twitter:card`: what LinkedIn, Slack or iMessage show when someone pastes a link.
+  There's no `og:image` on purpose: a plain text card is better than an invented picture.
+- `canonical` and `og:url`: the page's one true address. Only written once
+  `*domain*` is set (`page-url`), because without a domain the final address isn't
+  certain, and a wrong one is worse than none.
+- `theme-color`, one per theme: the color phones give the browser bar.
+- `favicon.svg` (in `static/`): the tab icon, a λ whose color follows the theme
+  thanks to a `prefers-color-scheme` query *inside* the SVG. Without any icon, every
+  visit makes a request for `/favicon.ico` that ends in a 404.
+- The 404 page adds `<meta name="robots" content="noindex">` (`:noindex t` in its
+  `defpage`) so it never shows up in search results.
+- **Fonts.** The Google Fonts stylesheet blocks the first paint until it arrives.
+  `preconnect` opens the connection early and `display=swap` shows text in a
+  fallback font until the real one arrives. Loading the stylesheet "async" would
+  shave a little more off, but the whole page would flash in the wrong fonts first.
+
+The first thing in `<body>` is a **skip link** ("Skip to content"): invisible until
+you press Tab, then it slides in at the top left and jumps to `<main id="main">`, past
+the header. Keyboard and screen-reader users don't have to tab through the nav on
+every page.
+
 ## Design notes: why it looks the way it does
 
 - **Plain colors:** about six grays and no real accent color. Hierarchy comes from
@@ -567,6 +828,6 @@ instantly instead of animating.
 - *Practical Common Lisp* (free online), especially chapters 3 (a small database, a
   lot like `content.lisp`), 8 (macros) and 31 (an HTML generator, a bigger version of
   `html.lisp`).
-- Exercises: the shrinking header and the nav highlight now exist (Effects 6 and 7),
-  so read them and change a number or two. Next: add one more animated "mockup" like
-  the terminal. A small chart that draws itself would fit a data person well.
+- Exercises: see "Start here" at the top. A bigger one for later: add one more
+  animated "mockup" like the terminal. A small chart that draws itself would fit a
+  data person well (the diagrams' `stroke-dashoffset` trick is most of it).
