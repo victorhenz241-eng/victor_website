@@ -103,15 +103,67 @@ the form sits flush left, as it would in an editor."
                            out)
              (when more (terpri out)))))
 
+;;; Private comments. Everything we slice is published, comments included. So a
+;;; comment that starts with "private:" -- ;; private: ... or a trailing
+;;; ; private: ... -- is a note for the author only: we cut it out here.
+;;; A whole-line private comment takes its line with it; a trailing one only
+;;; takes itself (and the spaces before it). The line numbers shown still name
+;;; the real lines of the file, so the panel can be a few lines shorter.
+
+(defun private-comment-p (text i)
+  "Does the ; comment starting at index I of TEXT begin with \"private:\"?"
+  (let ((j (or (position-if-not (lambda (c) (member c '(#\; #\Space #\Tab))) text :start i)
+               (length text))))
+    (and (<= (+ j 8) (length text))
+         (string-equal "private:" text :start2 j :end2 (+ j 8)))))
+
+(defun strip-private-comments (text)
+  "TEXT without its private: comments. It walks the text like the reader would,
+so a ; inside a \"string\", a |symbol| or a #\\; character is not a comment."
+  ;; MAKE-STRING-OUTPUT-STREAM, not WITH-OUTPUT-TO-STRING: we need to take back
+  ;; what we wrote so far (GET-OUTPUT-STREAM-STRING) to trim its spaces.
+  (let ((out (make-string-output-stream)) (i 0) (n (length text)))
+    (loop while (< i n)
+          do (let ((c (char text i)))
+               (cond
+                 ;; A string or |symbol|: copy it whole, \ escapes included.
+                 ((find c "\"|")
+                  (let ((j (1+ i)))
+                    (loop while (and (< j n) (char/= (char text j) c))
+                          do (incf j (if (char= (char text j) #\\) 2 1)))
+                    (setf j (min n (1+ j)))
+                    (write-string text out :start i :end j)
+                    (setf i j)))
+                 ;; #\x is one character, whatever x is (even ; or ").
+                 ((and (char= c #\#) (< (+ i 2) n) (char= (char text (1+ i)) #\\))
+                  (write-string text out :start i :end (+ i 3))
+                  (incf i 3))
+                 ((char= c #\;)
+                  (let ((eol (or (position #\Newline text :start i) n)))
+                    (if (not (private-comment-p text i))
+                        (write-string text out :start i :end eol)
+                        ;; Drop the spaces we already wrote before the comment.
+                        (let* ((so-far (get-output-stream-string out))
+                               (kept (string-right-trim '(#\Space #\Tab) so-far))
+                               (line-start (1+ (or (position #\Newline kept :from-end t) -1))))
+                          (write-string kept out)
+                          ;; Nothing left on the line: drop the line and its newline.
+                          (when (and (= line-start (length kept)) (< eol n))
+                            (incf eol))))
+                    (setf i eol)))
+                 (t (write-char c out) (incf i)))))
+    (get-output-stream-string out)))
+
 (defun chunk (file text start end &key role)
   "A plist describing the characters START..END of FILE (whose text is TEXT).
-ROLE is a short word shown next to the file name: \"data\" or \"render\"."
+ROLE is a short word shown next to the file name: \"data\" or \"render\".
+Private comments (see STRIP-PRIVATE-COMMENTS) never make it into the chunk."
   (let ((column (- start (1+ (or (position #\Newline text :end start :from-end t) -1)))))
     (list :file file
           :role role
           :from (line-number text start)
           :to (line-number text end)
-          :text (dedent (subseq text start end) column))))
+          :text (dedent (strip-private-comments (subseq text start end)) column))))
 
 (defun content-chunks (&rest groups)
   "Chunks from src/content.lisp. Each group is a list of DEFPARAMETER names that sit
@@ -188,6 +240,10 @@ the parts that get a color."
                                         (1+ i))))
                    ((and (char= c #\#) (< (1+ i) n) (char= (char text (1+ i)) #\'))
                     (emit "c-paren" (+ i 2)))   ; #'function
+                   ((and (char= c #\#) (< (+ i 2) n) (char= (char text (1+ i)) #\\))
+                    ;; #\; or #\( is one character, not a comment or a paren.
+                    (write-string text plain :start i :end (+ i 3))
+                    (incf i 3))
                    ((char= c #\:)
                     (emit "c-key" (scan #'symbol-char-p (1+ i))))
                    ((and (symbol-char-p c) (plusp i) (char= (char text (1- i)) #\())
@@ -201,12 +257,16 @@ the parts that get a color."
 ;;; 4. The panel
 ;;; ------------------------------------------------------------------
 
-(defun source-panel (label chunks &key scroll)
+(defun source-panel (label chunks &key scroll heading)
   "A <figure> showing CHUNKS one under the other, each with its file name and lines.
 LABEL names it for screen readers. With SCROLL, any chunk longer than 30 lines is
 capped at a fixed height; its <pre> then gets tabindex 0 so keyboard users can
-focus it and scroll it with the arrow keys."
+focus it and scroll it with the arrow keys.
+HEADING is for the hero's panel: in source mode the page's real <h1> is hidden
+with the rest of the hero, so the panel brings its own, visible only to screen
+readers (.sr-only). HEADING is a list of nodes, like *HEADLINE*."
   `(:figure :class "source" :aria-label ,label
+     ,@(when heading `((:h1 :class "sr-only" ,@heading)))
      ,@(loop for (i c) in (numbered chunks)
              collect
              (destructuring-bind (&key file role from to text) c
@@ -229,7 +289,8 @@ focus it and scroll it with the arrow keys."
 (defun hero-source ()
   (source-panel "Lisp source of the introduction"
                 (append (content-chunks '(*eyebrow* *intro*) '(*links* *repl*))
-                        (list (pages-chunk (headed-by 'defun 'hero))))))
+                        (list (pages-chunk (headed-by 'defun 'hero))))
+                :heading *headline*))
 
 (defun home-section-source (id)
   "The source panel for the home page section ID, or NIL if it has none."
@@ -262,7 +323,8 @@ its own (heading paragraph ...) list from :sections."
      (source-panel "Lisp source of this project's header"
                    (list (chunk "src/content.lisp" text
                                 (second plist) (third (nth (1- key) fields)) :role "data")
-                         (pages-chunk (headed-by 'mapc))))
+                         (pages-chunk (headed-by 'mapc)))
+                   :heading (list (getf project :name)))
      (loop for part in (elements text sections)
            for n from 1
            collect (source-panel (format nil "Lisp source of part ~d" n)
