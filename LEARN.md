@@ -223,6 +223,117 @@ search for it. Then remove it.
 
 ---
 
+## Effect 9: "(λ) source" shows the Lisp behind the page
+
+**In plain words:** press `(λ) source` in the header (or pick "Toggle source view" in
+the ⌘K menu). Every section fades out and is replaced by the Lisp that produced it:
+first the *data* from `content.lisp`, then the *render* call from `pages.lisp`. Press
+again to go back. The choice is remembered on the next page.
+
+The important word is *real*. Nothing is retyped: at build time Lisp opens its own
+source files as text and cuts out the exact characters of each form, comments and
+spacing included. Change a sentence in `content.lisp`, rebuild, and the source view
+changes with it. The line numbers in each panel are the real ones too.
+
+**Private notes: `;; private:`.** "Comments included" means every comment inside
+those forms is published to every visitor. So there are two kinds of comment:
+- a normal comment is part of the showcase: write it for a recruiter
+  (`; mailto: makes the link open an email`);
+- a comment that starts with `private:` is a note for you only. The build cuts it out
+  of every panel, but it stays in the file:
+
+```lisp
+    ;; private: DRAFT, check these numbers      <- whole line: the line is dropped
+    :url nil  ; private: repo not public yet    <- end of a line: only the comment goes
+```
+
+`strip-private-comments` (in `chunk`, section 2 of `source.lisp`) walks the text the way
+the reader would, so a `;` inside a `"string"` or a `#\;` character is never mistaken
+for a comment. Panels can then be a few lines shorter than the range they show.
+Docstrings are code, not comments, so they're always shown: keep them neutral.
+The rule is also written at the top of `content.lisp`.
+
+**Step 1: read a file as text** (`src/source.lisp`, section 1). `source-text` returns
+the whole of `src/content.lisp` as one string. Lisp code is just text until something
+*reads* it.
+
+**Step 2: let the reader find the forms.** Where does `(defparameter *about* ...)` end?
+Counting parens by hand breaks on a `")"` inside a string or a comment. The Lisp
+reader already knows all those rules, so we ask it:
+
+```lisp
+(file-position stream)                  ; where am I?          -> start
+(read-preserving-whitespace stream)     ; read one whole form
+(file-position stream)                  ; where am I now?      -> end
+(subseq text start end)                 ; the form's original text
+```
+
+`READ` gives back the *data* (a list we can test, e.g. "is it a `defparameter` named
+`*about*`?"), and the two positions give back the *text*. We get both at once. That's
+`form-slices`. Three details:
+- We read from a **string stream**, not the file: on a file, `file-position` counts
+  bytes, and `é` takes two bytes, so the numbers wouldn't match the string.
+- `skip-blanks` steps over spaces and `;` comments *before* noting the start, so
+  the comment above a form doesn't end up in its slice.
+- `read-preserving-whitespace` instead of `read`: plain `read` may eat the space
+  after a form, so the end would be one character too far.
+
+To go *inside* a list (one project inside `*projects*`, or one `(section ...)` call
+inside `(defpage "index.html" ...)`), `elements` runs the same loop starting just
+after the list's `(`. That's how a case-study page shows only its own project.
+
+**Step 3: color it with a tokenizer** (`highlight`, section 3). It walks the text one
+character at a time and recognises a few shapes: `;` to the end of the line is a
+comment, `"` to the next unescaped `"` is a string, `:word` is a keyword, a symbol
+right after `(` is an operator, parens and quote marks are punctuation, and `#\x`
+is a single character (so `#\;` doesn't start a comment). Each piece
+becomes `(:span :class "c-string" "...")`, plain Lisp data, so `html.lisp` escapes
+it like any other text. A tokenizer doesn't need to *understand* Lisp, only to tell
+these shapes apart.
+
+The colors are gray steps plus one green for strings (the terminal's green, darker
+in light mode). Each was checked to keep 4.5:1 contrast on the panel, even the dim parens.
+
+**Step 4: hide it until asked.** `with-source` (in `source.lisp`) puts each panel in a
+`<template>` next to the section's content. The browser parses a template but never
+shows it, and screen readers and search engines skip it. **Without JavaScript the
+page is exactly the same as before.** `static/source-view.js` copies the panels out
+(hidden), shows the button, and does the swap.
+
+**Step 5: the swap** (`source-view.js` + `style.css` section 11):
+1. The old side gets `.is-leaving`: it fades out and lifts 4px (160ms).
+2. Then the `hidden` attributes swap, and the new side starts from `.is-entering`
+   (transparent, 6px low, its bottom 60% clipped away with `clip-path`). Removing
+   the class lets the transition play: it fades up while the clip uncovers it from
+   the top, like a page being printed. Each chunk of code follows the one above it
+   by 70ms (the stagger trick from Effect 1).
+3. Swapping changes every section's height, which would make the page jump. So just
+   before the swap JS notes where the section you're reading sits on screen, and just
+   after, scrolls by the difference. You stay on the same section.
+4. Coming back with the source view already on, there's no animation and nothing to
+   hold in place: the swap happens once, at load. If the address has a `#section`
+   (the "← All work" link goes to `./#projects`), JS jumps to it again, because the
+   browser's first jump was measured on the old, shorter layout.
+
+`hidden` matters for accessibility: a screen reader reads either the content or the
+code, never both. The button is a `<button aria-pressed>`, which screen readers
+announce as a toggle ("source, toggle button, pressed"), and the CSS styles the
+pressed state from that same attribute. With reduced motion, the swap is instant.
+Hiding the hero would also hide the page's only `<h1>`, so the hero's panel carries
+its own copy with `class="sr-only"` (`:heading` in `source-panel`): invisible, but
+screen-reader users still land on a page with a title.
+
+**Remembering the choice:** `localStorage` keeps a small value per site in the
+browser. It can throw an error (private windows, blocked storage), so every use is
+wrapped in `try { } catch { }`: if it fails, the site just doesn't remember.
+
+**Try it:** add a comment inside `*education*` in `content.lisp`, rebuild, and open the
+source view: your comment is there. Now start it with `private:`, rebuild: it's gone
+from the page but still in your file. Then call `(form-slices (source-text
+"content.lisp") 0)` in the REPL and look at the numbers.
+
+---
+
 ## The rule that applies to every effect: reduced motion
 
 Some people get dizzy from animations and turn on "Reduce motion" in their OS.
@@ -230,7 +341,8 @@ Some people get dizzy from animations and turn on "Reduce motion" in their OS.
 turn every effect off for them. Keep this in place as you add effects.
 
 Turning motion off doesn't mean turning features off: with reduced motion the header
-still shrinks, the nav still highlights and the menu still opens. They just change
+still shrinks, the nav still highlights, the menu still opens and the source view
+still swaps. They just change
 instantly instead of animating.
 
 ## Design notes: why it looks the way it does
