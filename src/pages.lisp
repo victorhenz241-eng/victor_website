@@ -253,9 +253,25 @@ HOME-PAGE is T on index.html only (see HOME below)."
         (:footer :class "page footer"
          (:span "© " ,*name*)
          (:span "Built with " (:a :href "https://lisp-lang.org" "Common Lisp")
-                " and a little CSS"))
+                " and a little CSS")
+         ,(build-stats))
         ;; The dialog sits outside <main>: it's closed (invisible) until opened.
         ,(command-menu home)))))
+
+(defun build-stats ()
+  "The footer's last line: numbers measured while the site builds (see stats.lisp).
+Two of them don't exist yet while the page renders, so they're markers that
+BUILD replaces afterwards. Outside a build *BUILD-STATS* is NIL: no line at all.
+The dots between items come from the CSS, so screen readers don't read them."
+  (when *build-stats*
+    (destructuring-bind (&key lisp lines pages date) *build-stats*
+      `(:div :class "build-stats"
+         (:ul :aria-label "Build stats"
+          (:li (:b ,lisp))
+          (:li (:b ,(format nil "~:d" lines)) " lines of Lisp")   ; ~:d writes 1,312
+          (:li (:b ,pages) " pages rendered in " (:b (:raw ,*render-ms-marker*) " ms"))
+          (:li "this page " (:b (:raw ,*page-bytes-marker*)) " bytes")
+          (:li "built " (:b (:time :datetime ,date ,date))))))))
 
 ;;; ------------------------------------------------------------------
 ;;; Building blocks

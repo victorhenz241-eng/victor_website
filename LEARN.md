@@ -334,6 +334,82 @@ from the page but still in your file. Then call `(form-slices (source-text
 
 ---
 
+## Effect 10: the footer measures its own build
+
+**In plain words:** the last line of every footer reads something like
+`SBCL 2.6.8 · 1,172 lines of Lisp · 4 pages rendered in 13 ms · this page 44,583 bytes · built 2026-10-25`.
+Nobody typed those numbers in. The build measures each one while it runs, so they're
+true every time you rebuild. Rebuild twice and the milliseconds will wobble a little.
+That's real timing.
+
+**Where each number comes from** (`src/stats.lisp`, used by `build` in `src/build.lisp`):
+
+| Number | How it's measured |
+|---|---|
+| `SBCL 2.6.8` | `(lisp-implementation-type)` and `(lisp-implementation-version)` ask the running Lisp |
+| lines of Lisp | `lines-of-lisp` reads every `src/*.lisp` and adds up the lines |
+| `rendered in N ms` | a clock read before and after rendering every page (below) |
+| `this page N bytes` | the size of the HTML file the line is written in, as saved on disk |
+| `built …` | today's date in UTC: `(decode-universal-time (get-universal-time) 0)` |
+
+**Measuring time in Lisp.** `(get-internal-real-time)` returns a wall-clock reading as
+a whole number of *internal time units*. How long a unit lasts depends on the Lisp, and
+the constant `internal-time-units-per-second` tells you (1,000,000 in SBCL, so one unit
+is a microsecond). Read the clock, do the work, read it again, subtract, then convert:
+
+```lisp
+(round (* 1000 (- (get-internal-real-time) start))
+       internal-time-units-per-second)        ; -> milliseconds
+```
+
+**What exactly is timed?** It has to be said precisely, or the number is a bit of a
+lie. It's the time to turn the data into the HTML text of all 4 pages: building each
+tree, reading the source files the "(λ) source" panels need, and rendering. It does
+*not* include SBCL starting up, compiling the code, writing the files or copying
+`static/`. That's why the footer says "rendered", not "built".
+
+**The chicken-and-egg problem.** Two numbers live *inside* the page they describe.
+The render time isn't known until every page is rendered, and the page size isn't
+known until the page is finished. Yet the number itself is part of the page, and
+writing it changes the size. The fix has two steps:
+
+1. **Leave a marker.** While rendering, the footer gets `<!--render-ms-->` and
+   `<!--page-bytes-->` (HTML comments, inserted with `:raw`) where the numbers will go.
+   They can't clash with real text: every `<` in normal text is escaped to `&lt;`, so
+   no sentence on the site, not even the source view, can contain a real `<!--`.
+2. **Fill in, then measure until it agrees.** The render time is simply pasted in. For
+   the size, `fill-in-page-size` guesses, measures and guesses again:
+   ```
+   guess 0       -> with "0" written in, the page is 44,578 bytes
+   guess 44,578  -> with "44,578" written in, it's 44,583 bytes
+   guess 44,583  -> still 44,583 bytes. The number describes itself. Done.
+   ```
+   Only the *number of digits* changes the size, so it settles in two or three rounds.
+   (The value it settles on is called a *fixed point*.)
+
+**Bytes are not characters.** `(length "é")` is 1, but saved as UTF-8 "é" takes 2
+bytes, and "→" takes 3. The site is full of `·`, `→` and `λ`, so `length` would be
+wrong. `utf-8-length` counts bytes the way the file will store them. Check it
+yourself: `wc -c public/index.html` prints exactly the number in that page's footer.
+
+**A special variable carries the numbers.** `*build-stats*` is made with `defvar`, so
+it's *special* (dynamic): `build` wraps the rendering in `(let ((*build-stats* stats)) …)`
+and `layout`, deep inside, sees that value without it being passed as an argument.
+When you call a page function yourself in the REPL, it's `NIL` and the footer simply
+leaves the stats line out. See *Practical Common Lisp*, chapter 6 ("Dynamic, a.k.a. Special, Variables").
+
+**The dots that vanish when the line wraps (CSS).** Each item begins with a `·`
+drawn by `::before`. The list is pulled `1.5em` to the left and its wrapper has
+`overflow: hidden`. So the dot that would start a new line falls outside and is clipped.
+`content: "·" / ""` gives the dot empty alternative text, so screen readers don't say
+"middle dot" four times.
+
+**Try it:** rebuild twice and compare the milliseconds. Add a paragraph to `*about*`,
+rebuild, and watch the home page's byte count grow while the project pages' stay the
+same. Then run `wc -c public/*.html` and check every footer.
+
+---
+
 ## The rule that applies to every effect: reduced motion
 
 Some people get dizzy from animations and turn on "Reduce motion" in their OS.

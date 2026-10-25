@@ -15,6 +15,7 @@ victor-site/
 │   ├── html.lisp          # Lisp lists -> HTML (read this first)
 │   ├── content.lisp       # ← your text lives here
 │   ├── source.lisp        # "(λ) source": slices and colors the real Lisp source
+│   ├── stats.lisp         # the footer's build numbers, measured during the build
 │   ├── pages.lisp         # layout, building blocks, defpage macro
 │   └── build.lisp         # writes everything into public/
 ├── static/
