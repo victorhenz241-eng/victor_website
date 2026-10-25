@@ -357,7 +357,7 @@ entries arrive one after another (that's what the index in STAGGER is for)."
   ;;   :w :h  the size of a box
   '(:right  (:step 220 :side 84  :w 140 :h 54)    ; wide screens, flowing left to right
     :down   (:step 118 :side 250 :w 160 :h 54)    ; wide screens, flowing top to bottom
-    :narrow (:step 120 :side 122 :w 112 :h 54)))  ; phones: always top to bottom
+    :narrow (:step 140 :side 122 :w 112 :h 54)))  ; phones: always top to bottom
 
 (defparameter *diagram-pad* 8
   "Empty space around the picture, so the box borders aren't cut off.")
@@ -460,7 +460,18 @@ the same code draw the phone version: it just maps MAIN to y instead of x."
                                 (list (+ (first tip) across-by) (+ (second tip) along)))))
                      (format nil "M ~a L ~a L ~a Z" (at tip)
                              (at (off (* -7 dir) 3.5)) (at (off (* -7 dir) -3.5)))))
-                 (edge-id (i) (format nil "~a-e~d" id i)))
+                 (edge-id (i) (format nil "~a-e~d" id i))
+                 (label-box (point label)
+                   ;; The rectangle (left top right bottom) a label covers when it
+                   ;; is centered on POINT. The font is monospaced, so every
+                   ;; character is about 6.5 units wide, plus 4 on each side.
+                   (destructuring-bind (x y) (xy point)
+                     (let ((half (+ 4 (* 3.25 (length label)))))
+                       (list (- x half) (- y 8) (+ x half) (+ y 8)))))
+                 (overlap-p (a b)
+                   ;; Do two rectangles overlap, or come closer than 2 units?
+                   (destructuring-bind ((l1 t1 r1 b1) (l2 t2 r2 b2)) (list a b)
+                     (and (< l1 (+ r2 2)) (< l2 (+ r1 2)) (< t1 (+ b2 2)) (< t2 (+ b1 2))))))
           `(:svg :class ,(format nil "diagram-svg diagram-~(~a~)" layout)
                  :viewBox ,(format nil "0 0 ~d ~d" width height)
                  :width ,width :height ,height
@@ -512,10 +523,18 @@ the same code draw the phone version: it just maps MAIN to y instead of x."
              ;; A label sits halfway along its arrow's curve, unless the edge
              ;; says otherwise with :label-at. A long arrow (5 points) has its
              ;; label on its straight part, in the first gap after its start.
+             ;; If that spot would cover a box or a label placed before it (on
+             ;; the narrow picture, several arrows can share one gap), the label
+             ;; slides along its own arrow to the first free spot. TAKEN holds
+             ;; the rectangles already used: every box, then each label placed.
              ;; In (from nil to label . options), NIL skips the arrow symbol and
              ;; the dot catches whatever comes after the label, like :label-at.
              (:g :class "edge-labels"
-              ,@(loop for (from nil to label . options) in edges
+              ,@(loop with taken = (loop for (name) in nodes
+                                         collect (destructuring-bind (x y) (xy (center name))
+                                                   (list (- x (/ w 2)) (- y (/ h 2))
+                                                         (+ x (/ w 2)) (+ y (/ h 2)))))
+                      for (from nil to label . options) in edges
                       for i from 0
                       when label
                         collect
@@ -529,22 +548,35 @@ the same code draw the phone version: it just maps MAIN to y instead of x."
                                                 when (or (and (eq a from) (eq b to))
                                                          (and (eq a to) (eq b from)))
                                                   return n))
-                               (point (if (and (= (length points) 5) (not at))
-                                          ;; half a gap from the start, towards the 2nd point
-                                          (destructuring-bind ((m c) (m2 c2) &rest curve) points
-                                            (declare (ignore c2 curve))
-                                            (list (+ m (* (signum (- m2 m)) (- step (* 2 hm)) 1/2)) c))
-                                          (bezier-point (last points 4) (or at 0.5)))))
+                               (wanted (if (and (= (length points) 5) (not at))
+                                           ;; half a gap from the start, towards the 2nd point
+                                           (destructuring-bind ((m c) (m2 c2) &rest curve) points
+                                             (declare (ignore c2 curve))
+                                             (list (+ m (* (signum (- m2 m)) (- step (* 2 hm)) 1/2)) c))
+                                           (bezier-point (last points 4) (or at 0.5))))
+                               ;; The spots to try, in order: the wanted one, then
+                               ;; others along the curve, closer and closer to its ends.
+                               (spots (cons wanted
+                                            (mapcar (lambda (tt) (bezier-point (last points 4) tt))
+                                                    '(0.5 0.35 0.65 0.25 0.75 0.2 0.8))))
+                               ;; NOTANY is true when no rectangle in TAKEN overlaps.
+                               ;; If every spot is taken, keep the wanted one.
+                               (point (or (find-if (lambda (spot)
+                                                     (notany (lambda (box) (overlap-p (label-box spot label) box))
+                                                             taken))
+                                                   spots)
+                                          wanted))
+                               (box (label-box point label)))
+                          (push box taken)
                           ;; A small rect in the page color hides the line behind
-                          ;; the label, spaces included. The font is monospaced,
-                          ;; so every character is about 6.5 units wide.
-                          (destructuring-bind (x y) (xy point)
-                            (let ((half (+ 4 (* 3.25 (length label)))))
-                              `(:g :class "edge-label" :style ,(stagger i)
-                                   :data-walk ,walk-step
-                                 (:rect :x ,(num (- x half)) :y ,(num (- y 8))
-                                        :width ,(num (* 2 half)) :height 16 :rx 3)
-                                 (:text :x ,(num x) :y ,(num (+ y 3.5)) ,label)))))))
+                          ;; the label, spaces included.
+                          (destructuring-bind (left top right bottom) box
+                            (declare (ignore bottom))
+                            `(:g :class "edge-label" :style ,(stagger i)
+                                 :data-walk ,walk-step
+                               (:rect :x ,(num left) :y ,(num top)
+                                      :width ,(num (- right left)) :height 16 :rx 3)
+                               (:text :x ,(num (/ (+ left right) 2)) :y ,(num (+ top 11.5)) ,label))))))
              ;; The pulse: one dot per arrow of the pipeline. They share one
              ;; cycle of DUR seconds; each dot moves during its own slice of it,
              ;; so together they look like one parcel going box to box.
