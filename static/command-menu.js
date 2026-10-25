@@ -83,6 +83,13 @@ function setupCommandMenu(dialog) {
   // Follow the selected link. dialog.close() first, so a link to a section of
   // this same page (like "./#about") doesn't leave the menu open on top of it.
   function go(option, newTab) {
+    // An action (no link), like "Toggle source view": close the menu and announce
+    // it as an event; the file that owns the feature (source-view.js) listens.
+    if (option.dataset.cmdkAction) {
+      dialog.close();
+      document.dispatchEvent(new CustomEvent("cmdk:action", { detail: option.dataset.cmdkAction }));
+      return;
+    }
     if (newTab) {
       window.open(option.href, "_blank", "noopener");
       return;
@@ -123,8 +130,13 @@ function setupCommandMenu(dialog) {
     // The panel fills the whole dialog, so a click whose target is the dialog
     // itself landed on the backdrop, outside the panel: close.
     if (event.target === dialog) dialog.close();
-    // A click on an option: close, and let the link do its normal job.
-    else if (event.target.closest('[role="option"]')) dialog.close();
+    else {
+      const option = event.target.closest('[role="option"]');
+      // A click on an action runs it; a click on a link closes the menu and
+      // lets the link do its normal job.
+      if (option?.dataset.cmdkAction) go(option);
+      else if (option) dialog.close();
+    }
   });
 
   // The button in the header. It's hidden in the HTML; we reveal it now that

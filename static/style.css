@@ -8,7 +8,7 @@
  * Sections in this file:
  *   1. Tokens (variables)   2. Base   3. Header   4. Hero   5. Terminal
  *   6. Sections & timeline  7. Cards  8. Contact & footer  9. MOTION
- *   10. Command menu (⌘K)
+ *   10. Command menu (⌘K)   11. Source view ((λ) source)
  */
 
 /* ---------- 1. Tokens ---------- */
@@ -26,6 +26,11 @@
   --term-text: #d7dade;
   --term-dim: #7d848c;
   --term-green: #9fd8a7;
+
+  /* Source view (section 11). Every color here keeps 4.5:1 on --surface,
+     so even the dimmed parens stay readable. */
+  --code-dim: #686d74;        /* parens, quotes, comments */
+  --code-string: #2d6a3e;     /* a darker cousin of --term-green, for light pages */
 
   --font-display: "Literata", Georgia, serif;
   --font-body: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -51,6 +56,8 @@
     --line: #23282d;
     --accent: #e8eaed;
     --term-bg: #080a0c;
+    --code-dim: #80868d;
+    --code-string: var(--term-green);
   }
 }
 
@@ -186,6 +193,29 @@ kbd {
 .site-header nav a[aria-current="true"] { color: var(--text); }
 .site-header nav a[aria-current="true"]::after { transform: scaleX(1); }
 
+/* The "(λ) source" toggle (section 11 has the source panels themselves). */
+.source-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--muted);
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem 0.25rem 0.625rem;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background 0.3s var(--ease);
+}
+.source-toggle[hidden] { display: none; }
+.source-toggle:hover { color: var(--text); border-color: var(--faint); background: var(--surface); }
+.source-toggle .c-paren { color: inherit; opacity: 0.6; transition: opacity 0.3s var(--ease); }
+/* Pressed = inverted: the ink becomes the background. aria-pressed drives the
+   look, so what you see and what a screen reader says can't disagree. */
+.source-toggle[aria-pressed="true"] { color: var(--bg); background: var(--text); border-color: var(--text); }
+.source-toggle[aria-pressed="true"] .c-paren { opacity: 1; }
+
 /* The "Search ⌘K" button that opens the command menu. */
 .cmdk-button {
   display: inline-flex;
@@ -210,6 +240,12 @@ kbd {
   /* No keyboard on most phones: the chip becomes a plain "Search" pill. */
   .cmdk-button { padding: 0.25rem 0.75rem; }
   .cmdk-button kbd { display: none; }
+  /* Just "(λ)" on phones; the word stays for screen readers (it's the button's name). */
+  .source-toggle { padding: 0.25rem 0.5rem; }
+  .source-toggle-text {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip-path: inset(50%); white-space: nowrap;
+  }
 }
 
 /* ---------- 4. Hero ---------- */
@@ -596,6 +632,7 @@ kbd {
   scroll-margin: var(--s1);        /* keeps a little room when scrolled into view */
 }
 .cmdk-item[hidden] { display: none; }
+.cmdk-item:not([href]) { cursor: pointer; }   /* actions have no href (see COMMANDS) */
 .cmdk-label { flex-shrink: 0; }
 .cmdk-item .arrow { color: var(--faint); }
 .cmdk-hint {
@@ -648,6 +685,103 @@ kbd {
 @keyframes fade-in { from { opacity: 0; } }
 .cmdk[open] { animation: cmdk-in 0.2s var(--ease); }
 .cmdk[open]::backdrop { animation: fade-in 0.2s var(--ease); }
+
+/* ---------- 11. Source view ----------
+ *
+ * The "(λ) source" button swaps each section's content (.view-rendered) for a
+ * panel showing the Lisp that made it (.source). Lisp builds the panels and
+ * colors the code; source-view.js copies them out of their <template> and runs
+ * the swap in two steps:
+ *   1. .is-leaving  : the old side fades out and lifts 4px        (160ms)
+ *   2. swap the `hidden` attributes, then .is-entering -> removed:
+ *      the new side fades in from 6px below, while a clip-path
+ *      uncovers it from the top, like a page being printed       (~500ms)
+ * Each chunk of code arrives 70ms after the one above it (--i, as in section 9).
+ */
+
+.source {
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.65;
+  overflow: hidden;
+  clip-path: inset(0 0 0 0 round var(--radius));
+}
+.source[hidden], .view-rendered[hidden] { display: none; }
+.hero .source { margin-top: calc(-1 * var(--s2)); } /* the hero has a lot of padding already */
+
+.source-chunk + .source-chunk { border-top: 1px solid var(--line); }
+
+.source-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0.625rem var(--s2);
+  border-bottom: 1px dashed var(--line);
+  font-size: 0.6875rem;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+.source-role {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text);
+}
+.source-lines { margin-left: auto; white-space: nowrap; }
+
+.source pre {
+  margin: 0;
+  padding: var(--s2);
+  white-space: pre-wrap;           /* long strings wrap instead of scrolling sideways */
+  overflow-wrap: anywhere;
+  font: inherit;
+  color: var(--text);
+}
+/* Long data (all the projects) scrolls inside a fixed height. A fade at the bottom
+   says "there's more"; it's a mask, so it works on any background. */
+.source pre.source-scroll {
+  max-height: min(32rem, 70vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 3rem), transparent);
+          mask-image: linear-gradient(to bottom, #000 calc(100% - 3rem), transparent);
+  padding-bottom: var(--s6);
+}
+
+/* The figure clips its overflow and the fade would hide the bottom of an outline,
+   so a focused scroll box draws its ring on the whole chunk instead (:has = "a
+   chunk that contains a focused pre"). */
+.source pre:focus-visible { outline: none; }
+.source-chunk:has(> pre:focus-visible) { box-shadow: inset 0 0 0 2px var(--accent); }
+
+/* Syntax colors: gray steps, plus one green for strings (like the terminal's results). */
+.c-paren   { color: var(--code-dim); }
+.c-comment { color: var(--code-dim); font-style: italic; }
+.c-string  { color: var(--code-string); }
+.c-key     { color: var(--muted); }
+.c-op      { font-weight: 500; }
+
+/* The swap. Only transform, opacity and clip-path: all cheap to animate. */
+.view-rendered, .source {
+  transition: opacity 0.16s var(--ease), transform 0.16s var(--ease);
+}
+.view-rendered.is-leaving, .source.is-leaving { opacity: 0; transform: translateY(-4px); }
+
+.source.is-arriving {
+  transition: opacity 0.45s var(--ease), transform 0.5s var(--ease), clip-path 0.6s var(--ease);
+}
+.source.is-arriving .source-chunk {
+  transition: opacity 0.45s var(--ease) calc(80ms + var(--i, 0) * 70ms);
+}
+.view-rendered.is-arriving { transition: opacity 0.45s var(--ease), transform 0.5s var(--ease); }
+
+.source.is-entering { opacity: 0; transform: translateY(6px); clip-path: inset(0 0 60% 0 round var(--radius)); }
+.source.is-entering .source-chunk { opacity: 0; }
+.view-rendered.is-entering { opacity: 0; transform: translateY(6px); }
 
 /* People who ask their OS for less motion get none. Always include this. */
 @media (prefers-reduced-motion: reduce) {

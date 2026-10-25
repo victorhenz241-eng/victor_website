@@ -9,5 +9,6 @@
                 :components ((:file "package")   ; the namespace everything lives in
                              (:file "html")      ; a tiny Lisp -> HTML renderer (~60 lines)
                              (:file "content")   ; YOUR text: bio, experience, projects
+                             (:file "source")    ; "view source" mode: slices + colors the Lisp
                              (:file "pages")     ; layout + page definitions
                              (:file "build"))))) ; writes everything into public/

@@ -14,12 +14,14 @@ victor-site/
 │   ├── package.lisp
 │   ├── html.lisp          # Lisp lists -> HTML (read this first)
 │   ├── content.lisp       # ← your text lives here
+│   ├── source.lisp        # "(λ) source": slices and colors the real Lisp source
 │   ├── pages.lisp         # layout, building blocks, defpage macro
 │   └── build.lisp         # writes everything into public/
 ├── static/
 │   ├── style.css          # all the design + motion
 │   ├── motion.js          # scroll reveal, typing terminal, header + nav state
-│   └── command-menu.js    # the ⌘K menu
+│   ├── command-menu.js    # the ⌘K menu
+│   └── source-view.js     # the "(λ) source" switch
 ├── .claude/settings.json  # puts Claude Code in "Learning" mode for this project
 └── .github/workflows/     # auto-deploy to GitHub Pages
 ```
@@ -104,4 +106,5 @@ when you want the CV link to appear. Keep `*repl*` factual and to four commands.
 - [x] Make the header shrink when you scroll.
 - [x] Highlight the current section in the nav.
 - [x] A ⌘K command menu generated from the data.
+- [x] A "(λ) source" switch that shows the real Lisp behind each section.
 - [ ] Add a second animated "mockup": a small chart that draws itself would suit a data person.

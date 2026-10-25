@@ -85,7 +85,20 @@ reload the page, so we jump to the top of the page instead (<body id=\"top\">)."
        (:nav :aria-label "Sections"
         ,@(loop for (id label) in *home-sections*
                 collect `(:a :href ,(format nil "~a#~a" home id) ,label)))
+       ,(source-toggle)
        ,(command-button)))))
+
+(defun source-toggle ()
+  "The \"(λ) source\" switch (see source.lisp). A <button> with aria-pressed is
+a toggle button: screen readers say \"Source, toggle button, not pressed\".
+Hidden until static/source-view.js shows it, and it stays hidden on pages with
+nothing to show (the 404)."
+  `(:button :type "button" :class "source-toggle" :hidden t
+            :aria-pressed "false" :data-source-toggle t
+            :title "Show the Lisp that generates this page"
+     (:span :class "source-toggle-glyph" :aria-hidden "true"
+      (:span :class "c-paren" "(") "λ" (:span :class "c-paren" ")"))
+     (:span :class "source-toggle-text" "source")))
 
 ;;; ------------------------------------------------------------------
 ;;; The command menu (press ⌘K or Ctrl+K, or click "Search" in the header)
@@ -148,7 +161,13 @@ as in SITE-HEADER, so the links work from the home page, a project page and the 
    (loop for (label url) in *links*
          when url
            collect `(:group "Links" :label ,label
-                     :href ,url :hint ,(link-hint url)))))
+                     :href ,url :hint ,(link-hint url)))
+   ;; An action instead of a link: no :href, and command-menu.js runs it.
+   ;; Only pages that have a source view get it. The 404 is the one page whose
+   ;; HOME is the base path (see LAYOUT), and it has nothing to show.
+   (unless (equal home *base-path*)
+     (list '(:group "Actions" :label "Toggle source view" :action "toggle-source"
+             :hint "(λ)" :keywords ("view source" "lisp" "code"))))))
 
 (defun command-menu (home)
   "The <dialog> holding the command menu. It follows the ARIA \"combobox\" pattern:
@@ -166,7 +185,7 @@ a text box that controls a list box of options, grouped under small mono labels.
                  :autocomplete "off" :spellcheck "false" :autofocus t)
          (:kbd :class "cmdk-esc" :aria-hidden "true" "esc"))
         (:div :id "cmdk-list" :class "cmdk-list" :role "listbox" :aria-label "Results"
-         ,@(loop for group in '("Pages" "Projects" "Links")
+         ,@(loop for group in '("Pages" "Projects" "Links" "Actions")
                  ;; REMOVE-IF-NOT keeps the commands of this group only.
                  for items = (remove-if-not (lambda (c) (equal (getf c :group) group)) commands)
                  when items
@@ -175,11 +194,12 @@ a text box that controls a list box of options, grouped under small mono labels.
                       (:div :class "cmdk-group-label" :aria-hidden "true" ,group)
                       ,@(loop for item in items
                               collect
-                              (destructuring-bind (&key label href hint keywords
+                              (destructuring-bind (&key label href hint keywords action
                                                    &allow-other-keys) item
                                 ;; tabindex -1: options are reached with the arrow
                                 ;; keys, not Tab. The focus stays in the text box.
                                 `(:a :class "cmdk-item" :role "option" :href ,href
+                                     :data-cmdk-action ,action
                                      :id ,(format nil "cmdk-~d" (incf n))
                                      :tabindex "-1" :aria-selected "false"
                                      ;; ~{~a~^ ~} joins a list with spaces.
@@ -187,7 +207,7 @@ a text box that controls a list box of options, grouped under small mono labels.
                                                        (format nil "~{~a~^ ~}" keywords))
                                    (:span :class "cmdk-label" ,label
                                           ;; ↗ marks links that leave the site.
-                                          ,(when (uiop:string-prefix-p "http" href)
+                                          ,(when (and href (uiop:string-prefix-p "http" href))
                                              '(:span :class "arrow" " ↗")))
                                    (:span :class "cmdk-hint" ,hint)))))))
         ;; Outside the list box on purpose: a listbox may only contain options.
@@ -225,7 +245,8 @@ HOME-PAGE is T on index.html only (see HOME below)."
         (:link :rel "stylesheet" :href ,(format nil "~@[~a~]style.css" base))
         ;; defer = download now, run after the HTML is parsed.
         (:script :src ,(format nil "~@[~a~]motion.js" base) :defer t)
-        (:script :src ,(format nil "~@[~a~]command-menu.js" base) :defer t))
+        (:script :src ,(format nil "~@[~a~]command-menu.js" base) :defer t)
+        (:script :src ,(format nil "~@[~a~]source-view.js" base) :defer t))
        (:body :id "top"
         ,(site-header home)
         (:main :class "page" ,@body)
@@ -241,12 +262,17 @@ HOME-PAGE is T on index.html only (see HOME below)."
 ;;; ------------------------------------------------------------------
 
 (defun section (id number heading &rest content)
-  "A page section with a numbered label, e.g. 01 — About."
+  "A page section with a numbered label, e.g. 01 — About. If the home page has a
+source panel for ID (see HOME-SECTION-SOURCE in source.lisp), it comes along."
+  (section-with-source id number heading (home-section-source id) content))
+
+(defun section-with-source (id number heading panel content)
+  "SECTION, with the source PANEL given explicitly (NIL for none)."
   `(:section :id ,id :class "section"
      (:h2 :class "label" :data-reveal t
       (:span :class "label-num" ,(format nil "~2,'0d" number))
       ,heading)
-     ,@content))
+     ,@(apply #'with-source panel content)))
 
 (defun link-list ()
   `(:ul :class "links"
@@ -271,11 +297,12 @@ makes sense even with JavaScript off; motion.js just replays it."
 
 (defun hero ()
   `(:div :class "hero"
-     (:p :class "eyebrow" :data-reveal t :style ,(stagger 0) ,*eyebrow*)
-     (:h1 :data-reveal t :style ,(stagger 1) ,@*headline*)
-     (:p :class "intro" :data-reveal t :style ,(stagger 2) ,*intro*)
-     (:div :data-reveal t :style ,(stagger 3) ,(link-list))
-     ,(terminal)))
+     ,@(with-source (hero-source)
+         `(:p :class "eyebrow" :data-reveal t :style ,(stagger 0) ,*eyebrow*)
+         `(:h1 :data-reveal t :style ,(stagger 1) ,@*headline*)
+         `(:p :class "intro" :data-reveal t :style ,(stagger 2) ,*intro*)
+         `(:div :data-reveal t :style ,(stagger 3) ,(link-list))
+         (terminal))))
 
 (defun timeline (items)
   "Experience or education as a vertical timeline. The line draws itself and the
@@ -311,26 +338,31 @@ entries arrive one after another (that's what the index in STAGGER is for)."
   "A full page for one project: a header with its numbers and links, then one
 numbered section per part of the story. Returns a list of trees, one per block."
   (destructuring-bind (&key name summary tags links stats sections &allow-other-keys) project
-    `((:div :class "hero case-hero"
-        (:p :class "eyebrow" :data-reveal t :style ,(stagger 0)
-         (:a :class "back" :href "./#projects" "← All work"))
-        (:h1 :data-reveal t :style ,(stagger 1) ,name)
-        (:p :class "intro" :data-reveal t :style ,(stagger 2) ,summary)
-        (:div :data-reveal t :style ,(stagger 3)
-         (:ul :class "tags" ,@(mapcar (lambda (tag) `(:li ,tag)) tags))
-         (:ul :class "links"
-          ,@(loop for (label url) in links
-                  collect `(:li (:a :class "pill" :href ,url ,label " ↗")))))
-        (:ul :class "stats" :data-reveal t :style ,(stagger 4)
-         ,@(loop for (value label) in stats
-                 collect `(:li (:strong ,value) (:span ,label)))))
-      ;; (heading . paragraphs) splits ("How it works" "p1" "p2") into the
-      ;; first element and the rest of the list.
-      ,@(loop for (heading . paragraphs) in sections
-              for n from 1
-              collect (section (format nil "part-~d" n) n heading
-                               `(:div :class "prose" :data-reveal t
-                                  ,@(mapcar (lambda (p) `(:p ,p)) paragraphs)))))))
+    ;; MULTIPLE-VALUE-BIND catches the two values CASE-STUDY-SOURCES returns.
+    (multiple-value-bind (hero-panel part-panels) (case-study-sources project)
+      `((:div :class "hero case-hero"
+          ,@(with-source hero-panel
+              `(:p :class "eyebrow" :data-reveal t :style ,(stagger 0)
+                 (:a :class "back" :href "./#projects" "← All work"))
+              `(:h1 :data-reveal t :style ,(stagger 1) ,name)
+              `(:p :class "intro" :data-reveal t :style ,(stagger 2) ,summary)
+              `(:div :data-reveal t :style ,(stagger 3)
+                 (:ul :class "tags" ,@(mapcar (lambda (tag) `(:li ,tag)) tags))
+                 (:ul :class "links"
+                  ,@(loop for (label url) in links
+                          collect `(:li (:a :class "pill" :href ,url ,label " ↗")))))
+              `(:ul :class "stats" :data-reveal t :style ,(stagger 4)
+                 ,@(loop for (value label) in stats
+                         collect `(:li (:strong ,value) (:span ,label))))))
+        ;; (heading . paragraphs) splits ("How it works" "p1" "p2") into the
+        ;; first element and the rest of the list.
+        ,@(loop for (heading . paragraphs) in sections
+                for panel in part-panels
+                for n from 1
+                collect (section-with-source
+                         (format nil "part-~d" n) n heading panel
+                         (list `(:div :class "prose" :data-reveal t
+                                  ,@(mapcar (lambda (p) `(:p ,p)) paragraphs)))))))))
 
 ;;; ------------------------------------------------------------------
 ;;; Pages
