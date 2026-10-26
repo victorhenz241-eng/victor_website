@@ -46,9 +46,9 @@ the italic part gets its own <em> tag. Lisp data and HTML are the same thing her
   "Each string becomes one paragraph.")
 
 (defparameter *about-photo*
-  ;; private: alt text to refine once the photo is chosen (where, which race?)
+  ;; private: add the race name to the alt text if you want (photo from June 2024)
   '(:file "media/about-running.jpg"
-    :alt "Victor running")
+    :alt "Victor racing on a blue track in the red and light-blue Luxembourg national team kit.")
   "A photo beside the About text. It only appears once the file exists in static/;
 until then the section is text only. :alt describes it for people who can't see it.")
 
@@ -143,7 +143,6 @@ animation stays short.")
        "Cut the Line sits on the call path of the person it protects. Calls from people in their contact book pass through untouched: they are never listened to. An unknown caller first hears that the call is being analyzed. Only then does live transcription start, and four weighted signals feed a risk score."
        "The response is graduated: a warning on the screen, then a spoken warning only the callee hears and a text to the real relative, then the caller is put on hold. There is no automatic hang-up, by design: a false alarm on a real family emergency would be serious."
        "At any moment the callee can ask for an identity check. A 4-digit code is texted to the number the contact book holds for the claimed relative, never to the number on screen. A cloned voice on a spoofed number never receives it.")
-      ;; private: Victor to confirm role wording
       ("My part"
        "It was a team project, and I built the scoring side: the four risk signals, the scoring engine with its circuit breakers, and the live dashboard."
        "I tuned the content analyzer (Claude on Amazon Bedrock) against failures we measured on degraded phone speech, added French number normalization, and added a signal for when the real contact answers NO to \"is that you calling?\". I also integrated the two halves of the codebase into one shared event contract.")
