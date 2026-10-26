@@ -45,6 +45,13 @@ the italic part gets its own <em> tag. Lisp data and HTML are the same thing her
     "I like taking a project from end to end and getting it into people's hands. That started with Parsed, the AI news app I co-founded, where I built the personalization engine and a political-bias detector. Away from the keyboard I run middle distance: I've represented Luxembourg in the 1500m at the European Youth Olympic Festival.")
   "Each string becomes one paragraph.")
 
+(defparameter *about-photo*
+  ;; private: alt text to refine once the photo is chosen (where, which race?)
+  '(:file "media/about-running.jpg"
+    :alt "Victor running")
+  "A photo beside the About text. It only appears once the file exists in static/;
+until then the section is text only. :alt describes it for people who can't see it.")
+
 (defparameter *links*
   '(("GitHub"   "https://github.com/victorhenz241-eng")
     ("LinkedIn" "https://www.linkedin.com/in/victor-henz-158471267/")
@@ -92,17 +99,93 @@ animation stays short.")
      :dates "2024 – 2028"
      :summary "GPA 4.0 / 4.0. Machine learning, computer vision, stochastic processes, algorithms, big data systems.")))
 
+(defparameter *projects-intro* "Here are some of my projects."
+  "The line under the Projects label. The cards are a selection, not everything.")
+
 (defparameter *projects*
   ;; Strongest first: a recruiter may only read the first card or two.
-  '((:name "Cut the Line — 1st of 120"
-     :url nil
+  ;; :featured  gets a bigger card on the home page
+  ;; :blurb     the one line on the card (the case-study page shows :summary)
+  ;; :card      what fills the top of the card: (:video file :poster file) or
+  ;;            (:image file :alt "..."), shown only once the file exists.
+  ;;            Without it, or until then, the card draws something from the
+  ;;            project's own data instead (:stat, :funnel or :diagram).
+  '((:name "Cut the Line"
+     :slug "cut-the-line"
+     :url "https://github.com/Coachbet/projet_utopia"
+     :featured t
+     :blurb "Real-time protection against phone scams and AI-cloned voices. 1st of 120 at the Secure Horizons 2026 hackathon."
      :summary "Won first place among 120 participants at the Secure Horizons 2026 hackathon (ESSEC) and the €7,000 prize, with a 4-person team. We built a product that detects phone scams and AI-cloned voices, and pitched it to a jury that included KPMG's Head of AI."
-     :tags ("hackathon winner" "AI voice" "scam detection"))
+     :tags ("hackathon winner" "Claude" "Twilio" "FastAPI" "wav2vec2")
+     :links (("Code" "https://github.com/Coachbet/projet_utopia"))
+     :stats (("1st" "of 120 participants, Secure Horizons 2026")
+             ("€7,000" "prize")
+             ("4" "people on the team"))
+     :card (:video "media/cut-the-line-card.mp4" :poster "media/cut-the-line-poster.jpg")
+     :stat ("1st" "of 120")
+     ;; The demo we made, with sound. Plays only when you press play.
+     :video (:file "media/cut-the-line-demo.mp4"
+             :poster "media/cut-the-line-poster.jpg"
+             :sound t
+             :caption "The product demo (1 min 48 s, with sound).")
+     ;; Photos from the event: every .jpg in static/media/cut-the-line/, sorted by
+     ;; name. One description per photo, in the same order. No photos, no section.
+     ;; private: Victor to add the podium photos and one alt text per photo
+     :gallery (:folder "media/cut-the-line/"
+               :heading "On the podium"
+               :alts ())
+     :sections
+     (("The challenge"
+       "Phone scams aimed at older people follow the same script: a relative in trouble, a fake bank advisor or a fake police officer, pushing for an urgent payment and asking to keep it secret. A few seconds of public audio are now enough to clone a voice, and the number on screen can be spoofed."
+       "Spam filters act before the call and bank checks act after the payment. Nothing protects the conversation itself.")
+      ("What we built"
+       "Cut the Line sits on the call path of the person it protects. Calls from people in their contact book pass through untouched: they are never listened to. An unknown caller first hears that the call is being analyzed. Only then does live transcription start, and four weighted signals feed a risk score."
+       "The response is graduated: a warning on the screen, then a spoken warning only the callee hears and a text to the real relative, then the caller is put on hold. There is no automatic hang-up, by design: a false alarm on a real family emergency would be serious."
+       "At any moment the callee can ask for an identity check. A 4-digit code is texted to the number the contact book holds for the claimed relative, never to the number on screen. A cloned voice on a spoofed number never receives it.")
+      ;; private: Victor to confirm role wording
+      ("My part"
+       "It was a team project, and I built the scoring side: the four risk signals, the scoring engine with its circuit breakers, and the live dashboard."
+       "I tuned the content analyzer (Claude on Amazon Bedrock) against failures we measured on degraded phone speech, added French number normalization, and added a signal for when the real contact answers NO to \"is that you calling?\". I also integrated the two halves of the codebase into one shared event contract.")
+      ("The pitch"
+       "We pitched the product and its business plan, a paid subscription for all age groups, to a jury of industry professionals that included KPMG's Head of AI.")
+      ("Stack"
+       "Python 3.12 and FastAPI in a hexagonal architecture, Twilio (Media Streams, Conference, Voice JS SDK), Amazon Transcribe streaming, Claude on Amazon Bedrock, wav2vec2 for synthetic voices, SQLite for call metadata.")
+      ("Result"
+       "First place among 120 participants at the Secure Horizons 2026 hackathon at ESSEC, in October 2026, and the €7,000 prize."))
+     ;; The score, drawn like the other diagrams (see DIAGRAM-SVG). The weights and
+     ;; thresholds are the real ones from the project's README.
+     :diagram
+     (:heading "The score"
+      :after "My part"
+      :flow :right
+      :title "Cut the Line risk score"
+      :caption "Four weighted signals make one score; the score picks the response. Circuit breakers keep a strong signal from being averaged away, and a synthetic voice alone can never push the score above 64."
+      :nodes ((content    :at (0 0) :label "Claude content" :note "weight 45")
+              (keywords   :at (0 1) :label "Keywords" :note "weight 20")
+              (voice      :at (0 2) :label "Synthetic voice" :note "weight 20")
+              (reputation :at (0 3) :label "Reputation" :note "weight 15")
+              (score      :at (1 1.5) :label "Risk score" :note "0 – 100")
+              (caution    :at (2 0.5) :label "Caution" :note "40 – 64")
+              (alert      :at (2 1.5) :label "Alert" :note "65 – 84")
+              (hold       :at (2 2.5) :label "Intervention" :note "85 and up"))
+      :edges ((content -> score)
+              (keywords -> score)
+              (voice -> score)
+              (reputation -> score)
+              (score -> caution "on screen")
+              (score -> alert "warn + text")
+              (score -> hold "on hold"))
+      :pulse (content score hold)))
     (:name "Event-Market Graph"
      :slug "event-market-graph"           ; a :slug means "give this project its own page"
      :url "https://event-market-graph-ten.vercel.app"
+     :featured t
+     :blurb "A Neo4j knowledge graph linking geopolitical events to market moves, walked by a LangGraph agent."
      :summary "A Neo4j knowledge graph linking geopolitical events to market moves, with a LangGraph agent that walks it. Team project: I built the animated frontend and the infrastructure."
      :tags ("Neo4j" "LangGraph" "React" "Docker")
+     ;; A short silent loop for the home page card, once recorded (README).
+     ;; Until then the card shows a small copy of the schema diagram below.
+     :card (:video "media/event-market-card.mp4" :poster "media/event-market-card.jpg")
      :links (("Live demo" "https://event-market-graph-ten.vercel.app")
              ("Code" "https://github.com/victorhenz241-eng/graphdb-event-market"))
      :stats (("6" "market series: Brent, WTI, EURUSD, USDJPY, US 10Y, VIX")
@@ -162,6 +245,8 @@ animation stays short.")
     (:name "Internship Radar"
      :slug "internship-radar"
      :url "https://github.com/victorhenz241-eng/intership_finder"
+     :featured t
+     :blurb "Turns ~16,000 internship listings into a short list worth applying to, every night, for about €0 a month."
      :summary "Turns ~16,000 internship listings into a short list worth applying to, every night. Six n8n workflows, a Rust dedup service and a Next.js app, for about €0 a month."
      :tags ("n8n" "Next.js" "Supabase" "Rust")
      :links (("Code" "https://github.com/victorhenz241-eng/intership_finder"))
@@ -180,6 +265,17 @@ animation stays short.")
        "The LinkedIn part stays manual. The app prepares text and tracks threads, but never sends a message, never connects and never fetches a LinkedIn page, because automating LinkedIn gets accounts restricted.")
       ("Stack"
        "Self-hosted n8n in Docker on a Google Cloud VM behind Caddy, a Rust dedup service, Groq for the LLM, Supabase (Postgres, auth, row-level security) and Next.js on Vercel."))
+     ;; The real funnel, counted in the live system (no company names). The bars
+     ;; grow when they scroll into view (FUNNEL in pages.lisp). Each step is
+     ;; (shown-value count label): COUNT sets the bar's length.
+     :funnel
+     (:heading "The funnel"
+      :after "What I built"
+      :caption "Counted in the live system, as of October 2026. Bar lengths use a log scale, so the small steps stay visible."
+      :steps (("~16,000" 16000 "listings scanned")
+              ("~250" 250 "kept in the table")
+              ("12" 12 "shortlisted")
+              ("7" 7 "applications sent")))
      ;; The architecture as a picture, drawn by pages.lisp (DIAGRAM-SVG):
      ;;   :at (column row)    where a box sits on a grid; columns run left to right
      ;;   (a -> b "label")    an arrow from box a to box b, with what travels on it
@@ -214,14 +310,13 @@ animation stays short.")
               (app -> groq "drafts")
               (db -> bot "reads"))
       :pulse (listings sweep db app)))
-    (:name "EFC Tracker"
-     :url nil                           ; private: private repo
-     :summary "Built and deployed a progressive web app for the ESSEC Football Club's 9-week conditioning program, with iOS push reminders. Now extending it to the whole club."
-     :tags ("Next.js" "TypeScript" "Redis" "PWA"))
     (:name "This website"
      :url nil                           ; private: TODO: the victor_website repo is private — link it once public
+     :blurb "Generated by Common Lisp, with a tiny HTML renderer written from scratch. No framework."
      :summary "Generated by a few hundred lines of Common Lisp, including a tiny HTML renderer written from scratch. No framework."
-     :tags ("Common Lisp" "CSS" "vanilla JS")))
+     :tags ("Common Lisp" "CSS" "vanilla JS")
+     ;; :lines-of-lisp = "count them during the build" (the same number as the footer).
+     :stat :lines-of-lisp))
   "The projects worth asking about in an interview.")
 
 (defparameter *contact-line* "Let's build something.")

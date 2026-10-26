@@ -1,12 +1,13 @@
 // motion.js — every moving part of the site, in plain JavaScript (no libraries).
 //
-// Six features:
+// Seven features:
 //   1. Scroll reveal: elements marked data-reveal fade/slide in when they enter the screen.
 //   2. The terminal: replays the REPL session in the hero, with a pause button.
 //   3. The header gets more compact once you scroll down.
 //   4. The nav highlights the section you're reading.
 //   5. Diagrams (project pages): arrows draw themselves, then dots or a walk loop.
 //   6. The demo video: plays (muted) only with JS and without reduced motion, with a Pause button.
+//   7. Card videos: short silent loops that play while on screen (or on hover), with a Pause button.
 // (The ⌘K command menu has its own file: command-menu.js.)
 //
 // The golden rule here is "progressive enhancement": the HTML already contains
@@ -397,5 +398,74 @@ document.querySelectorAll("[data-demo-video]").forEach((video) => {
     }).observe(video);
   } else {
     play();
+  }
+});
+
+// ---------------------------------------------------------------------------
+// 7. Looping card videos
+// ---------------------------------------------------------------------------
+// A project card can have a short, silent loop on top (LOOP-VIDEO in
+// src/media.lisp). The HTML has no `autoplay`, so by default it is a still
+// picture (its poster). Here we play it while at least half of it is on screen,
+// and pause it as soon as it leaves, so a page full of videos never plays them
+// all at once. Hovering a card with a mouse plays it too.
+// Under reduced motion we do nothing at all: the poster simply stays.
+// Anything that moves by itself for more than 5 seconds needs a way to stop it
+// (WCAG 2.2.2), so each video gets a Pause button, and a video you paused stays
+// paused until you press Play.
+//
+// Browsers only let a page start a video by itself when it is muted (the
+// `muted` attribute) and, on iPhones, plays inside the page (`playsinline`).
+// play() returns a promise that fails if the browser still says no (Low Power
+// Mode does that): we catch it, and the button then offers "Play".
+
+document.querySelectorAll("[data-loop-video]").forEach((video) => {
+  const button = video.parentElement.querySelector("[data-loop-toggle]");
+  if (reduceMotion || !button) return;
+
+  let stopped = false; // true once you press Pause
+  let inView = false;
+  const label = () => {
+    button.textContent = video.paused ? "Play" : "Pause";
+    button.setAttribute("aria-label", video.paused ? "Play video" : "Pause video");
+  };
+  const play = () =>
+    video.play().catch(() => {
+      button.hidden = false; // refused: offer a Play button instead
+      label();
+    });
+  video.addEventListener("play", () => {
+    button.hidden = false; // shown once something actually moves
+    label();
+  });
+  video.addEventListener("pause", label);
+
+  button.addEventListener("click", () => {
+    stopped = !video.paused;
+    if (stopped) video.pause();
+    else play();
+  });
+
+  // The card under the mouse plays even when less than half of it is on screen.
+  const card = video.closest(".card");
+  if (card) {
+    card.addEventListener("mouseenter", () => {
+      if (!stopped && video.paused) play();
+    });
+    card.addEventListener("mouseleave", () => {
+      if (!inView) video.pause();
+    });
+  }
+
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver(
+      ([entry]) => {
+        inView = entry.isIntersecting;
+        if (!inView) video.pause();
+        else if (!stopped) play();
+      },
+      // "half of it is visible": fine here, a card is never taller than the screen.
+      { threshold: 0.5 }
+    ).observe(video);
   }
 });

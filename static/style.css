@@ -9,7 +9,7 @@
  *   1. Tokens (variables)   2. Base   3. Header   4. Hero   5. Terminal
  *   6. Sections & timeline  7. Cards  8. Contact & footer  9. MOTION
  *   10. Command menu (⌘K)   11. Source view ((λ) source)
- *   12. Diagrams & the demo video
+ *   12. Diagrams & the demo video   13. Media: funnel, About photo, galleries
  */
 
 /* ---------- 1. Tokens ---------- */
@@ -446,33 +446,115 @@ kbd {
 
 /* ---------- 7. Cards ---------- */
 
+/* The line under a section label, e.g. "Here are some of my projects." */
+.section-intro { color: var(--muted); margin: calc(-1 * var(--s2)) 0 var(--s4); max-width: var(--measure); }
+
+/* Media tiles. A two-column grid: the featured projects get the big tiles (the
+   first one across the whole width), the others a compact row with a small
+   picture on the left. On a phone everything is one column. */
 .cards {
   list-style: none;
   padding: 0;
   margin: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s6) var(--s3);
+}
+.card-featured:first-child, .card-compact { grid-column: 1 / -1; }
+
+.card {
+  position: relative;              /* the title's link stretches over the card (below) */
+  display: flex;
+  flex-direction: column;
   gap: var(--s2);
 }
 
-.card {
-  background: var(--surface);
-  border: 1px solid transparent;
+/* The picture area. aspect-ratio keeps a 16:10 box whatever fills it, so the
+   page never jumps while a video or photo loads. object-fit: cover fills that
+   box and trims what sticks out, like a photo in a frame. */
+.card-media {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: var(--s3);
-  transition: border-color 0.3s, transform 0.3s var(--ease), box-shadow 0.3s var(--ease);
+  background: var(--surface);
+  transition: transform 0.4s var(--ease), box-shadow 0.4s var(--ease), border-color 0.3s;
 }
-.card:hover {
-  border-color: var(--line);
-  transform: translateY(-3px);
-  box-shadow: 0 12px 30px -18px rgb(14 17 20 / 0.35);
+.card-featured:first-child .card-media { aspect-ratio: 16 / 9; }
+.card-video, .card-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
-.card h3 { font-size: 1.0625rem; font-weight: 500; margin-bottom: var(--s1); }
+/* Hover: the tile lifts a little and the arrow moves. ":has()" means "a card
+   that contains...": a card whose link has the keyboard focus looks the same. */
+.card:hover .card-media, .card:has(.card-link:focus-visible) .card-media {
+  transform: translateY(-3px);
+  border-color: var(--faint);
+  box-shadow: 0 18px 40px -24px rgb(14 17 20 / 0.45);
+}
+
+.card-body { display: flex; flex-direction: column; gap: var(--s1); }
+.card h3 { font-size: 1.125rem; font-weight: 500; }
+.card-featured:first-child h3 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1.625rem;
+  letter-spacing: -0.015em;
+}
 .card h3 a { text-decoration: none; }
-.card .arrow { display: inline-block; color: var(--faint); transition: transform 0.3s var(--ease); }
+/* The link covers the whole card: an invisible layer over it, so a click on the
+   picture opens the project too. The focus ring goes around the picture instead. */
+.card-link::after { content: ""; position: absolute; inset: 0; z-index: 1; }
+.card-link:focus-visible { outline: none; }
+.card:has(.card-link:focus-visible) .card-media { outline: 2px solid var(--accent); outline-offset: 3px; }
+.card .arrow { display: inline-block; margin-left: 0.3em; color: var(--faint); transition: transform 0.3s var(--ease); }
 .card:hover .arrow { transform: translate(2px, -2px); color: var(--text); }
-.card p { color: var(--muted); margin: 0 0 var(--s2); }
+.card p { color: var(--muted); margin: 0; max-width: var(--measure); }
+.card .tags { margin-top: 0.25rem; }
+
+/* The compact row: a small tile on the left, the text on the right. */
+.card-compact {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: var(--s3);
+  align-items: center;
+}
+
+/* The Pause button sits above the link's layer (z-index), bottom right. */
+.media-toggle { position: absolute; right: var(--s1); bottom: var(--s1); z-index: 2; }
+
+/* Fallback tiles: when there's no photo or video yet, the card draws something
+   true from the project's data: a big number, the funnel, or the diagram.
+   A faint dot grid gives the empty space some texture. */
+.card-media.is-fallback {
+  display: grid;
+  place-items: center;
+  background-image: radial-gradient(var(--line) 1px, transparent 1.5px);
+  background-size: 16px 16px;
+}
+.card-tile { display: flex; flex-direction: column; align-items: center; gap: var(--s1); padding: var(--s3); }
+.card-tile-big {
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 8vw, 4.5rem);
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+.card-compact .card-tile-big { font-size: clamp(2.25rem, 6vw, 3rem); }
+.card-tile-note { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); }
+.card-diagram { position: absolute; inset: 0; padding: var(--s3); }
+.card-diagram svg { width: 100%; height: 100%; }
+.card-diagram .diagram-wide { display: block; }   /* the phone rule in section 12 would hide it */
+.card-media .funnel-mini { width: 100%; padding: var(--s3) var(--s4); }
+
+@media (max-width: 40rem) {
+  .cards { grid-template-columns: minmax(0, 1fr); gap: var(--s6); }
+  .card-featured:first-child .card-media { aspect-ratio: 16 / 10; }
+  .card-compact { grid-template-columns: minmax(0, 1fr); gap: var(--s2); }
+}
 
 .tags { display: flex; flex-wrap: wrap; gap: 0.375rem; list-style: none; padding: 0; margin: 0; }
 .tags li {
@@ -1003,6 +1085,93 @@ kbd {
 }
 .demo-toggle { position: absolute; right: var(--s1); bottom: var(--s1); }
 
+/* ---------- 13. Media: the funnel, the About photo, galleries ---------- */
+
+/* The funnel (FUNNEL in pages.lisp). Each step is a row: the number, its label,
+   then a bar whose length Lisp wrote into --w. The bars start at length 0
+   (scaleX(0), shrunk from the left edge) and grow to full length once the funnel
+   scrolls into view (.is-visible, added by motion.js), one after another (--i). */
+.funnel { margin: 0; }
+.funnel-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s3); }
+.funnel-steps li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  column-gap: var(--s2);
+  row-gap: 0.375rem;
+}
+.funnel-value {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+.funnel-label { color: var(--muted); font-size: 0.9375rem; }
+.funnel-bar {
+  grid-column: 1 / -1;
+  width: var(--w);
+  height: 0.625rem;
+  border-radius: 999px;
+  background: var(--text);
+  transform-origin: left;
+}
+.funnel .diagram-caption { margin-top: var(--s3); }
+.js .funnel[data-reveal] .funnel-bar {
+  transform: scaleX(0);
+  transition: transform 1s var(--ease) calc(250ms + var(--i, 0) * 180ms);
+}
+.js .funnel[data-reveal].is-visible .funnel-bar { transform: none; }
+
+/* The small funnel on a card: tighter, no animation (it's decoration). */
+.funnel-mini .funnel-steps { gap: 0.625rem; }
+.funnel-mini .funnel-value { font-size: 1.25rem; }
+.funnel-mini .funnel-label { font-size: 0.75rem; font-family: var(--font-mono); }
+.funnel-mini .funnel-bar { height: 0.375rem; }
+
+/* About: the photo beside the text on wide screens (text 3 parts, photo 2,
+   so about 40%), under it on phones. object-fit: cover crops the photo to a
+   portrait 4:5 frame, whatever its own shape. */
+.about-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: var(--s6);
+  align-items: start;
+}
+.about-figure { margin: 0; }
+.about-photo {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+@media (max-width: 40rem) {
+  .about-grid { grid-template-columns: minmax(0, 1fr); gap: var(--s4); }
+}
+
+/* A photo gallery on a project page: two columns, square-ish crops. */
+.gallery {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+  gap: var(--s2);
+}
+.gallery-photo {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
 /* People who ask their OS for less motion get none. Always include this. */
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
@@ -1013,4 +1182,8 @@ kbd {
   /* Diagrams: complete from the start, even before motion.js runs. */
   .js .diagram .edge-line { stroke-dashoffset: 0; }
   .js .diagram .edge-head, .js .diagram .edge-label, .js .diagram .node { opacity: 1; }
+  /* The funnel's bars: full length from the start. */
+  .js .funnel[data-reveal] .funnel-bar { transform: none; }
+  /* Cards don't lift. */
+  .card:hover .card-media { transform: none; }
 }

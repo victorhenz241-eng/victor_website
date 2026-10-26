@@ -11,5 +11,6 @@
                              (:file "content")   ; YOUR text: bio, experience, projects
                              (:file "source")    ; "view source" mode: slices + colors the Lisp
                              (:file "stats")     ; the footer's build numbers, measured
+                             (:file "media")     ; photos and videos, only if the file exists
                              (:file "pages")     ; layout + page definitions
                              (:file "build"))))) ; writes everything into public/
