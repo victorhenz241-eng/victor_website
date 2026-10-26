@@ -103,7 +103,10 @@ tell. An .mp4 file is a list of \"boxes\", each one starting with its size (4 by
 and a 4-letter type. The \"tkhd\" box (track header) ends with the track's width
 and height, 4 bytes each, as \"16.16 fixed point\" numbers: the top 16 bits are the
 whole part, so (ASH n -16) drops the fraction. A sound track's width is 0, so we
-keep the first track whose width isn't."
+keep the first track whose width isn't.
+A phone video filmed upright is often stored sideways, with a \"rotate me 90°\"
+note: the 3x3 matrix just before the width. Its first number is 0 when the video
+is turned a quarter turn, and then the width and height we see are swapped."
   (let ((bytes (read-bytes path))
         (tag (map 'vector #'char-code "tkhd")))
     (loop for at = (search tag bytes) then (search tag bytes :start2 (1+ at))
@@ -111,9 +114,10 @@ keep the first track whose width isn't."
           do (let* ((start (- at 4))
                     (size (u32 bytes start))
                     (width (ash (u32 bytes (+ start size -8)) -16))
-                    (height (ash (u32 bytes (+ start size -4)) -16)))
+                    (height (ash (u32 bytes (+ start size -4)) -16))
+                    (turned (zerop (u32 bytes (+ start size -44)))))
                (when (and (>= start 0) (>= size 84) (plusp width) (plusp height))
-                 (return (list width height)))))))
+                 (return (if turned (list height width) (list width height))))))))
 
 ;;; ------------------------------------------------------------------
 ;;; The tags

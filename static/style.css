@@ -548,6 +548,16 @@ kbd {
 .card-diagram { position: absolute; inset: 0; padding: var(--s3); }
 .card-diagram svg { width: 100%; height: 100%; }
 .card-diagram .diagram-wide { display: block; }   /* the phone rule in section 12 would hide it */
+/* On a card the diagram is drawn at about half size, so its thin lines and small
+   notes went faint. vector-effect: non-scaling-stroke keeps a line 1.5px wide
+   however small the picture; the boxes' names get the ink color; the notes and
+   arrow labels (5px tall at this size, unreadable) are left out. */
+.card-diagram .edge-line,
+.card-diagram .node rect { stroke: var(--muted); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.card-diagram .edge-head { fill: var(--muted); }
+.card-diagram .node-label { fill: var(--text); font-size: 15px; }
+.card-diagram .node-note,
+.card-diagram .edge-label { display: none; }
 .card-media .funnel-mini { width: 100%; padding: var(--s3) var(--s4); }
 
 @media (max-width: 40rem) {

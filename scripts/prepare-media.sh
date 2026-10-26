@@ -50,6 +50,11 @@ case "$name" in
 esac
 [ -f "$source" ] || { echo "No such file: $source"; exit 1; }
 out="$media/$name"
+# -ef: "are these the same file?" Making a web copy must never replace its original.
+if [ -e "$out" ] && [ "$source" -ef "$out" ]; then
+  echo "The source is $out itself: choose another name, or keep the original elsewhere."
+  exit 1
+fi
 
 case "$job" in
   photo)
@@ -70,14 +75,16 @@ case "$job" in
   *) usage ;;
 esac
 # The video writer can leave a temporary copy next to the file ("name.mp4.sb-…").
-rm -f "$out".sb-*
+# (media.swift writes "partial-NAME" first and renames it when it's complete.)
+rm -f "$out".sb-* "$media/partial-$name".sb-*
 
 # Check the result. For pictures, sips lists every property it can read: there
 # should be no GPS, make, model or date lines.
 case "$out" in
   *.jpg)
     sips -g pixelWidth -g pixelHeight "$out" | tail -n 2
-    if sips -g all "$out" | grep -i -E "gps|make|model|creation" ; then
+    # tail skips sips's first line, the file's path, which could contain "make".
+    if sips -g all "$out" | tail -n +2 | grep -i -E "gps|make|model|creation" ; then
       echo "WARNING: some metadata is still in $out"
       exit 1
     fi

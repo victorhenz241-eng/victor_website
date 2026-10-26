@@ -36,17 +36,27 @@ func flag(_ name: String) -> Bool {
     args.removeAll { $0 == name }
     return present
 }
+// The file we're writing, until it is complete (see "Writing safely" below).
+var partial: URL?
 func fail(_ message: String) -> Never {
+    if let p = partial { try? FileManager.default.removeItem(at: p) }
     FileHandle.standardError.write((message + "\n").data(using: .utf8)!)
     exit(1)
 }
+/// The number after NAME, or DEFAULT if NAME isn't given. "--start abc" stops
+/// with a clear message instead of a crash.
+func number(_ name: String, _ fallback: Double?) -> Double? {
+    guard let text = option(name) else { return fallback }
+    guard let value = Double(text), value >= 0 else { fail("\(name) needs a number, not \"\(text)\"") }
+    return value
+}
 
-let maxSide = Double(option("--max") ?? "1600")!
-let quality = Double(option("--quality") ?? "0.8")!
-let targetHeight = Double(option("--height") ?? "720")!
-let kbps = Double(option("--kbps") ?? "700")!
-let start = Double(option("--start") ?? "0")!
-let duration = option("--duration").map { Double($0)! }
+let maxSide = number("--max", 1600)!
+let quality = number("--quality", 0.8)!
+let targetHeight = number("--height", 720)!
+let kbps = number("--kbps", 700)!
+let start = number("--start", 0)!
+let duration = number("--duration", nil)
 let keepAudio = !flag("--no-audio")
 
 guard args.count == 3, ["photo", "video", "frame"].contains(args[0]) else {
@@ -58,8 +68,31 @@ guard args.count == 3, ["photo", "video", "frame"].contains(args[0]) else {
 }
 let job = args[0]
 let input = URL(fileURLWithPath: args[1])
-let output = URL(fileURLWithPath: args[2])
+let final = URL(fileURLWithPath: args[2])
+
+// ---- Writing safely ----
+//
+// We never write over the original: if IN and OUT are the same file, stop. And
+// we write to "partial-OUT" first, then rename it to OUT only once it is
+// complete. So a run that fails half-way leaves the previous OUT untouched.
+if input.resolvingSymlinksInPath().standardizedFileURL.path
+    == final.resolvingSymlinksInPath().standardizedFileURL.path {
+    fail("IN and OUT are the same file (\(final.path)): choose another name for OUT")
+}
+let output = final.deletingLastPathComponent().appendingPathComponent("partial-" + final.lastPathComponent)
 try? FileManager.default.removeItem(at: output)
+partial = output
+func done(_ message: String) -> Never {
+    do {
+        if FileManager.default.fileExists(atPath: final.path) {
+            _ = try FileManager.default.replaceItemAt(final, withItemAt: output)
+        } else {
+            try FileManager.default.moveItem(at: output, to: final)
+        }
+    } catch { fail("Can't save \(final.path): \(error.localizedDescription)") }
+    print(message)
+    exit(0)
+}
 
 /// Save IMAGE as a JPEG with NO metadata: no GPS, no camera model, no date.
 /// We pass only the compression quality, so nothing else is written.
@@ -89,8 +122,7 @@ if job == "photo" {
     guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
     else { fail("Can't decode \(input.path)") }
     writeJPEG(image, to: output)
-    print("Wrote \(output.lastPathComponent): \(image.width)x\(image.height), no metadata")
-    exit(0)
+    done("Wrote \(final.lastPathComponent): \(image.width)x\(image.height), no metadata")
 }
 
 let asset = AVURLAsset(url: input)
@@ -113,8 +145,7 @@ if job == "frame" {
     got.wait()
     guard let image = frame else { fail("No frame at \(start) s in \(input.path)") }
     writeJPEG(image, to: output)
-    print("Wrote \(output.lastPathComponent): the frame at \(start) s, \(image.width)x\(image.height)")
-    exit(0)
+    done("Wrote \(final.lastPathComponent): the frame at \(start) s, \(image.width)x\(image.height)")
 }
 
 // ---- video: re-encode as H.264 at the size and bitrate we choose ----
@@ -207,8 +238,8 @@ if audioOut != nil {
     audioIn = input
 }
 
-reader.startReading()
-writer.startWriting()
+if !reader.startReading() { fail("Can't read \(input.path): \(reader.error?.localizedDescription ?? "unknown error")") }
+if !writer.startWriting() { fail("Can't write: \(writer.error?.localizedDescription ?? "unknown error")") }
 writer.startSession(atSourceTime: startTime)
 
 // Copy every sample from the reader to the writer, video and sound side by side.
@@ -217,8 +248,9 @@ func pump(_ from: AVAssetReaderTrackOutput, _ to: AVAssetWriterInput, _ label: S
     group.enter()
     to.requestMediaDataWhenReady(on: DispatchQueue(label: label)) {
         while to.isReadyForMoreMediaData {
-            if let sample = from.copyNextSampleBuffer() {
-                to.append(sample)
+            // append returns false when the writer has failed: stop there too.
+            if let sample = from.copyNextSampleBuffer(), to.append(sample) {
+                continue
             } else {
                 to.markAsFinished()
                 group.leave()
@@ -230,6 +262,9 @@ func pump(_ from: AVAssetReaderTrackOutput, _ to: AVAssetWriterInput, _ label: S
 pump(videoOut, videoIn, "video")
 if let a = audioOut, let b = audioIn { pump(a, b, "audio") }
 group.wait()
+// The reader also returns "no more samples" when it fails half-way. Without this
+// check, a damaged source would give a video cut short, without a word.
+if reader.status == .failed { fail("Stopped reading \(input.path): \(reader.error?.localizedDescription ?? "unknown error")") }
 
 let finished = DispatchSemaphore(value: 0)
 writer.finishWriting { finished.signal() }
@@ -237,4 +272,4 @@ finished.wait()
 if writer.status != .completed { fail("Failed: \(writer.error?.localizedDescription ?? "unknown error")") }
 
 let bytes = (try? FileManager.default.attributesOfItem(atPath: output.path)[.size] as? Int) ?? 0
-print("Wrote \(output.lastPathComponent): \(Int(width))x\(Int(height)), \(String(format: "%.1f", Double(bytes) / 1_000_000)) MB\(audioOut == nil ? ", no sound" : "")")
+done("Wrote \(final.lastPathComponent): \(Int(width))x\(Int(height)), \(String(format: "%.1f", Double(bytes) / 1_000_000)) MB\(audioOut == nil ? ", no sound" : "")")
