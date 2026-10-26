@@ -184,20 +184,22 @@ animation stays short.")
      :blurb "A Neo4j knowledge graph linking geopolitical events to market moves, walked by a LangGraph agent."
      :summary "A Neo4j knowledge graph linking geopolitical events to market moves, with a LangGraph agent that walks it. Team project: I built the animated frontend and the infrastructure."
      :tags ("Neo4j" "LangGraph" "React" "Docker")
-     ;; A short silent loop for the home page card, once recorded (README).
-     ;; Until then the card shows a small copy of the schema diagram below.
-     :card (:video "media/event-market-card.mp4" :poster "media/event-market-card.jpg")
+     ;; A 9-second silent loop for the home page card: the agent walking the graph,
+     ;; cut from a screen recording of the live demo. Without the file, the card
+     ;; would show a small copy of the schema diagram below instead.
+     :card (:video "media/event-market-card.mp4" :poster "media/event-market-card-poster.jpg")
      :links (("Live demo" "https://event-market-graph-ten.vercel.app")
              ("Code" "https://github.com/victorhenz241-eng/graphdb-event-market"))
      :stats (("6" "market series: Brent, WTI, EURUSD, USDJPY, US 10Y, VIX")
              ("~4,500" "geopolitical and central-bank events")
              ("880" "daily price points")
              ("6 months" "of events and prices, Feb–Jul 2026"))
-     ;; A screen recording of the demo. It only appears once static/event-market.mp4
-     ;; exists (README, "Add the demo video"); until then the page has no video.
-     :video (:file "event-market.mp4"
-             :poster "event-market-poster.jpg"
-             :caption "A screen recording of the public demo, replaying a recorded agent run.")
+     ;; A screen recording of the live demo replaying one agent run. It is silent
+     ;; (no :sound), so it loops while it's on screen, like the card videos; the
+     ;; page adds a "Live demo" link after the caption.
+     :video (:file "media/event-market-demo.mp4"
+             :poster "media/event-market-poster.jpg"
+             :caption "A recorded replay of the live demo. The agent answers: \"Why did the VIX move in June?\"")
      ;; Each section is (heading paragraph paragraph ...).
      :sections
      (("The question"

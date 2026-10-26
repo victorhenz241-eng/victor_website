@@ -744,8 +744,8 @@ version all change. Then swap two arrows in `:edges` and watch the drawing order
 
 ## Effect 12: the demo video slot
 
-**In plain words:** if `static/event-market.mp4` exists when the site builds, the
-Event-Market page shows it under the header. If it doesn't, the page has no video
+**In plain words:** if `static/media/event-market-demo.mp4` exists when the site
+builds, the Event-Market page shows it under the header. If it doesn't, the page has no video
 and nothing breaks. `PROBE-FILE` returns the file's path if it exists and `NIL` if
 not, so a `WHEN` around it does the job (`demo-video` in `pages.lisp`). The Cut
 the Line page uses the same slot for a demo *with sound* (`:sound t`): that one gets
