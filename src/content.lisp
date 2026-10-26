@@ -127,13 +127,14 @@ animation stays short.")
      :video (:file "media/cut-the-line-demo.mp4"
              :poster "media/cut-the-line-poster.jpg"
              :sound t
-             :caption "The product demo (1 min 48 s, with sound).")
+             :caption "The product demo (1 min 10 s, with sound).")
      ;; Photos from the event: every .jpg in static/media/cut-the-line/, sorted by
      ;; name. One description per photo, in the same order. No photos, no section.
-     ;; private: Victor to add the podium photos and one alt text per photo
      :gallery (:folder "media/cut-the-line/"
-               :heading "On the podium"
-               :alts ())
+               :heading "At the hackathon"
+               :alts ("Our team on stage after the results, under a screen that reads: Cut the Line, winner of Secure Horizons 2026."
+                      "Pitching the business model on stage."
+                      "The team at work on laptops around a table during the hackathon."))
      :sections
      (("The challenge"
        "Phone scams aimed at older people follow the same script: a relative in trouble, a fake bank advisor or a fake police officer, pushing for an urgent payment and asking to keep it secret. A few seconds of public audio are now enough to clone a voice, and the number on screen can be spoofed."
@@ -151,7 +152,7 @@ animation stays short.")
       ("Stack"
        "Python 3.12 and FastAPI in a hexagonal architecture, Twilio (Media Streams, Conference, Voice JS SDK), Amazon Transcribe streaming, Claude on Amazon Bedrock, wav2vec2 for synthetic voices, SQLite for call metadata.")
       ("Result"
-       "First place among 120 participants at the Secure Horizons 2026 hackathon at ESSEC, in October 2026, and the €7,000 prize."))
+       "First place among 120 participants at the Secure Horizons 2026 hackathon at ESSEC, in October 2026, and the €7,000 prize. Built in 36 hours, chosen by 12 jury members."))
      ;; The score, drawn like the other diagrams (see DIAGRAM-SVG). The weights and
      ;; thresholds are the real ones from the project's README.
      :diagram
@@ -183,20 +184,22 @@ animation stays short.")
      :blurb "A Neo4j knowledge graph linking geopolitical events to market moves, walked by a LangGraph agent."
      :summary "A Neo4j knowledge graph linking geopolitical events to market moves, with a LangGraph agent that walks it. Team project: I built the animated frontend and the infrastructure."
      :tags ("Neo4j" "LangGraph" "React" "Docker")
-     ;; A short silent loop for the home page card, once recorded (README).
-     ;; Until then the card shows a small copy of the schema diagram below.
-     :card (:video "media/event-market-card.mp4" :poster "media/event-market-card.jpg")
+     ;; A 9-second silent loop for the home page card: the agent walking the graph,
+     ;; cut from a screen recording of the live demo. Without the file, the card
+     ;; would show a small copy of the schema diagram below instead.
+     :card (:video "media/event-market-card.mp4" :poster "media/event-market-card-poster.jpg")
      :links (("Live demo" "https://event-market-graph-ten.vercel.app")
              ("Code" "https://github.com/victorhenz241-eng/graphdb-event-market"))
      :stats (("6" "market series: Brent, WTI, EURUSD, USDJPY, US 10Y, VIX")
              ("~4,500" "geopolitical and central-bank events")
              ("880" "daily price points")
              ("6 months" "of events and prices, Feb–Jul 2026"))
-     ;; A screen recording of the demo. It only appears once static/event-market.mp4
-     ;; exists (README, "Add the demo video"); until then the page has no video.
-     :video (:file "event-market.mp4"
-             :poster "event-market-poster.jpg"
-             :caption "A screen recording of the public demo, replaying a recorded agent run.")
+     ;; A screen recording of the live demo replaying one agent run. It is silent
+     ;; (no :sound), so it loops while it's on screen, like the card videos; the
+     ;; page adds a "Live demo" link after the caption.
+     :video (:file "media/event-market-demo.mp4"
+             :poster "media/event-market-poster.jpg"
+             :caption "A recorded replay of the live demo. The agent answers: \"Why did the VIX move in June?\"")
      ;; Each section is (heading paragraph paragraph ...).
      :sections
      (("The question"
