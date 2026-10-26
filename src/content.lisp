@@ -115,7 +115,7 @@ animation stays short.")
      :url "https://github.com/Coachbet/projet_utopia"
      :featured t
      :blurb "Real-time protection against phone scams and AI-cloned voices. 1st of 120 at the Secure Horizons 2026 hackathon."
-     :summary "Won first place among 120 participants at the Secure Horizons 2026 hackathon (ESSEC) and the €7,000 prize, with a 4-person team. We built a product that detects phone scams and AI-cloned voices, and pitched it to a jury that included KPMG's Head of AI."
+     :summary "Won first place among 120 participants at the Secure Horizons 2026 hackathon (ESSEC) and the €7,000 prize, with a 4-person team. We built a product that detects phone scams and AI-cloned voices while the call is happening."
      :tags ("hackathon winner" "Claude" "Twilio" "FastAPI" "wav2vec2")
      :links (("Code" "https://github.com/Coachbet/projet_utopia"))
      :stats (("1st" "of 120 participants, Secure Horizons 2026")
