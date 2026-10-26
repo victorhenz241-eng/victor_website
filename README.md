@@ -106,7 +106,8 @@ A checklist. None of these can be done by the code for you.
       |---|---|---|
       | `about-running.jpg` | beside the About text | text only |
       | `cut-the-line/01.jpg`, `02.jpg`… | "On the podium", on the Cut the Line page (sorted by name) | no section |
-      | `event-market-card.mp4` + `event-market-card.jpg` | the Event-Market card on the home page | a small copy of its diagram |
+      | `event-market-card.mp4` + `event-market-poster.jpg` | the Event-Market card on the home page | a small copy of its diagram |
+      | `event-market-demo.mp4` + `event-market-poster.jpg` | under the header of the Event-Market page, looping | no video |
 
       Then describe each photo for people who can't see it: `:alt` in `*about-photo*`,
       and the `:alts` list of the Cut the Line `:gallery` (one string per photo, same
@@ -114,8 +115,6 @@ A checklist. None of these can be done by the code for you.
 - [ ] **Confirm the Cut the Line text.** "My part" was written from the repo's commit
       history (a `private: Victor to confirm role wording` note sits above it). Reword
       it as you see fit.
-- [ ] **Record the Event-Market demo video** for its page (`static/event-market.mp4`,
-      section 7). Until then the page simply has no video.
 - [ ] **Review the About text.** Its second paragraph is a draft written from the CV.
       In `content.lisp` it has a `;; private: DRAFT` note above it (never shown on the
       site). Rewrite it in your own voice, then delete the note.
@@ -182,15 +181,17 @@ choose the bitrate: the same demo is 10.5 MB at 720p.
 `scripts/prepare-media.sh video demo.mov my-demo.mp4 500`). `ls -lh static/media`
 shows the sizes.
 
-**The Event-Market videos**, once you've recorded the demo (⌘⇧5, *Record Selected
-Portion*, 15–20 s of one agent run, saved on the Desktop as `recording.mov`):
+**The Event-Market videos** are a recording of the live demo replaying "Why did the
+VIX move in June?" (light theme): `event-market-demo.mp4` is the whole run (15 s,
+1280×800, silent, it loops on the page), `event-market-card.mp4` is 9 s of it cropped
+to the graph and the agent's panel, and `event-market-poster.jpg` is the frame at 8 s.
+To redo them from a new recording (⌘⇧5, *Record Selected Portion*, saved on the
+Desktop as `recording.mov`; the card then shows the whole recorded area):
 
 ```sh
-scripts/prepare-media.sh clip ~/Desktop/recording.mov event-market-card.mp4 0 8
-scripts/prepare-media.sh poster ~/Desktop/recording.mov event-market-card.jpg 4
-# The looping, silent video on its own page lives in static/, not static/media/:
-swift scripts/media.swift video ~/Desktop/recording.mov static/event-market.mp4 --no-audio --kbps 900
-swift scripts/media.swift frame ~/Desktop/recording.mov static/event-market-poster.jpg --start 4
+scripts/prepare-media.sh clip ~/Desktop/recording.mov event-market-card.mp4 4 9
+swift scripts/media.swift video ~/Desktop/recording.mov static/media/event-market-demo.mp4 --no-audio --kbps 1500
+swift scripts/media.swift frame ~/Desktop/recording.mov static/media/event-market-poster.jpg --start 8
 ```
 
 The build reads each video's width and height from the file, so the page reserves
@@ -214,7 +215,7 @@ publish" above for the About draft and the CV. Keep `*repl*` factual and to four
 - [x] A "(λ) source" switch that shows the real Lisp behind each section.
 - [x] Diagrams generated from data on the project pages, drawing themselves (LEARN.md, Effect 11).
 - [x] Media-led project cards: a looping video or a photo on top, or a tile drawn from the data.
-- [ ] Record the Event-Market demo video and its card loop (section 7).
+- [x] Record the Event-Market demo video and its card loop (section 7).
 - [ ] Add a second animated "mockup": a small chart that draws itself would suit a data person.
 
 **Learning:** LEARN.md starts with a reading order, the concepts behind each file and
