@@ -5,7 +5,7 @@ where the code lives. Read it alongside the files.
 
 ## Start here: a tour of the code
 
-The whole site is about 1,800 lines of Lisp and 700 lines of JavaScript. You can
+The whole site is about 2,100 lines of Lisp and 800 lines of JavaScript. You can
 read all of it. This is a good order, with what to look for in each file.
 
 | # | File | What it does | Read it for |
@@ -16,11 +16,12 @@ read all of it. This is a good order, with what to look for in each file.
 | 4 | `src/pages.lisp` | the layout, the building blocks, the diagrams, the pages | backquote, `loop`, `destructuring-bind`, the `defpage` macro |
 | 5 | `src/build.lisp` | renders every page and writes `public/` | files, timing, special variables |
 | 6 | `src/stats.lisp` | the footer's measured numbers | fixed-point iteration, bytes vs characters |
-| 7 | `src/source.lisp` | the "(λ) source" view: cuts the real Lisp out of its own files and colors it | `read`, `file-position`, a tokenizer |
-| 8 | `static/style.css` | every color, size and transition | custom properties, transitions vs keyframes |
-| 9 | `static/motion.js` | scroll reveal, terminal, header, nav, diagrams, video | IntersectionObserver, async/await, promises |
-| 10 | `static/command-menu.js` | the ⌘K menu | `<dialog>`, the ARIA combobox |
-| 11 | `static/source-view.js` | the "(λ) source" switch | `<template>`, localStorage |
+| 7 | `src/media.lisp` | photos and videos: only when the file exists, with their size read from the file's bytes | bytes, `probe-file`, `directory` |
+| 8 | `src/source.lisp` | the "(λ) source" view: cuts the real Lisp out of its own files and colors it | `read`, `file-position`, a tokenizer |
+| 9 | `static/style.css` | every color, size and transition | custom properties, transitions vs keyframes |
+| 10 | `static/motion.js` | scroll reveal, terminal, header, nav, diagrams, videos | IntersectionObserver, async/await, promises |
+| 11 | `static/command-menu.js` | the ⌘K menu | `<dialog>`, the ARIA combobox |
+| 12 | `static/source-view.js` | the "(λ) source" switch | `<template>`, localStorage |
 
 A good first session: build once, open `public/index.html` in an editor next to
 `src/pages.lisp`, and find the Lisp that wrote each part of the HTML.
@@ -86,6 +87,11 @@ places to look (search for them in the file).
 - **A tokenizer.** Walking a string one character at a time and labelling runs of
   characters ("this is a string", "this is a comment"). → `highlight`, then
   `split-lines` and `code-line` in `src/source.lisp`.
+- **Reading a file as bytes.** `(with-open-file (in path :element-type '(unsigned-byte 8)) ...)`
+  opens a file as numbers from 0 to 255 instead of characters. Every image format
+  starts with a small header that says how big the picture is; reading a few bytes
+  at the right place gives you its width and height without decoding it. →
+  `png-size`, `jpeg-size` and `mp4-size` in `src/media.lisp` (Effect 13).
 - **Fixed-point iteration.** The page's size is written inside the page, and writing
   it changes the size. So: guess, measure, guess again with the measurement, until
   the guess stops changing. → `fill-in-page-size` in `src/stats.lisp` (Effect 10).
@@ -116,6 +122,17 @@ places to look (search for them in the file).
 - **localStorage with try/catch.** The browser's small per-site memory. It can
   throw (private windows), so every use is wrapped. → `load`/`save` in
   `static/source-view.js`.
+- **Lazy loading.** `<img loading="lazy">` lets the browser skip a picture until
+  you scroll near it; `decoding="async"` lets it decode the picture without
+  freezing the page. Both are just attributes. → `picture` in `src/media.lisp` (Effect 13).
+- **Video autoplay rules.** Browsers only let a page start a video by itself when it
+  is `muted`, and iPhones also want `playsinline`. We go further: no `autoplay`
+  attribute at all; JavaScript plays a card's loop while it's on screen, and only
+  without reduced motion. → section 7 of `motion.js` (Effect 13).
+- **`object-fit` and `aspect-ratio`.** `aspect-ratio: 16 / 10` gives a box its shape
+  before anything loads; `object-fit: cover` fills that box with a photo or video and
+  trims what sticks out, like a picture in a frame. → `.card-media` and `.about-photo`
+  in `style.css`.
 - **`prefers-reduced-motion`.** The OS setting "reduce motion". The CSS media query
   at the end of `style.css` and `reduceMotion` at the top of `motion.js` honor it.
 
@@ -123,11 +140,11 @@ places to look (search for them in the file).
 
 Small, real changes. Rebuild after each one (`sbcl --script make.lisp`) and look.
 
-1. **Add a third case study.** Give "EFC Tracker" a `:slug "efc-tracker"`, a
-   `:links` list, a few `:stats` and two or three `:sections`, in your own words
-   (only true facts: it's your CV). Rebuild: a new page appears, the card gets
-   an arrow, the ⌘K menu gets an entry, and its source view works. You wrote no
-   new code. Why? Follow `:slug` through `pages.lisp` to find out.
+1. **Add a fourth case study.** Give "This website" a `:slug "this-website"`, a
+   few `:stats` and two or three `:sections`, in your own words (only true facts).
+   Rebuild: a new page appears, the card's arrow changes, the ⌘K menu gets an entry,
+   and its source view works. You wrote no new code. Why? Follow `:slug` through
+   `pages.lisp` to find out.
 2. **Add a box to a diagram.** In the Radar's `:diagram`, add
    `(caddy :at (0 3) :label "Caddy" :note "HTTPS proxy")` and the arrow
    `(caddy -> bot "webhook")`. Check the wide picture, the phone picture (narrow
@@ -730,9 +747,12 @@ version all change. Then swap two arrows in `:edges` and watch the drawing order
 **In plain words:** if `static/event-market.mp4` exists when the site builds, the
 Event-Market page shows it under the header. If it doesn't, the page has no video
 and nothing breaks. `PROBE-FILE` returns the file's path if it exists and `NIL` if
-not, so a `WHEN` around it does the job (`demo-video` in `pages.lisp`).
+not, so a `WHEN` around it does the job (`demo-video` in `pages.lisp`). The Cut
+the Line page uses the same slot for a demo *with sound* (`:sound t`): that one gets
+the browser's controls and `preload="none"`, so not a byte of it downloads until you
+press play, and it never plays by itself.
 
-`mp4-size` reads the video's width and height straight from the file, so the
+`mp4-size` (now in `src/media.lisp`) reads the video's width and height straight from the file, so the
 `<video>` gets `width`/`height` and the page reserves its space before it loads.
 The `<video>` has no `autoplay` attribute: an attribute would start it even with
 JavaScript off or with reduced motion on. Playing is opt-in instead. Without JS, or
@@ -742,6 +762,80 @@ calls `video.play()` while the video is on screen (and pauses it when it leaves)
 unless you paused it yourself. `play()` returns a *promise* that fails if the browser
 refuses to play (some do, to save data or battery), so the code catches that and the
 button simply says "Play". How to record and compress the video: see README.
+
+---
+
+## Effect 13: media tiles, photos and the funnel
+
+**In plain words:** the project cards lead with a picture: a short silent video
+that plays while the card is on screen, or a photo. A project with no picture yet
+doesn't get a fake one; its card draws something true from its own data instead (a
+big "1st / 120", a small copy of its diagram or funnel, or the number of lines of Lisp,
+counted during the build). The About section gets a photo beside the text the moment
+`static/media/about-running.jpg` exists.
+
+### Step 1: true by construction
+
+`content.lisp` only *names* files: `:card (:video "media/cut-the-line-card.mp4" ...)`.
+`media.lisp` checks each one with `probe-file` before writing any tag. No file, no
+tag, so a missing photo can never become a broken-image icon. A gallery is a whole
+folder: `media-folder` lists its `.jpg` files with `directory` and sorts them by
+name, so `01.jpg`, `02.jpg`... come out in order, and an empty folder means no section.
+
+### Step 2: the size, read from the bytes
+
+If an `<img>` has no `width` and `height`, the browser doesn't know how tall it is
+until it arrives, and everything below it jumps down ("layout shift"). So the build
+opens each picture and reads its size:
+
+- **PNG:** the width and height are always at bytes 16 and 20 (`png-size`).
+- **JPEG:** a chain of segments, each starting with `#xFF`, a marker byte and its
+  length. `jpeg-size` hops from one to the next until it finds a "start of frame"
+  segment, which holds the height and the width.
+- **MP4:** a list of boxes; the `tkhd` box ends with the track's size (`mp4-size`).
+
+Try `(image-size "media/cut-the-line-poster.jpg")` in the REPL.
+
+### Step 3: loading only what's needed
+
+- `loading="lazy"` and `decoding="async"` on every `<img>` (`picture`): the browser
+  fetches a photo only as it comes near the screen. The `:eager` option is for a
+  picture visible as soon as the page opens, where lazy would only delay it.
+- A card's loop has `preload="metadata"`: just enough to know its size and show the
+  poster. A demo with sound has `preload="none"`.
+
+### Step 4: who presses play
+
+Browsers let a page start a video by itself only if it's `muted` (and, on iPhones,
+`playsinline`). Our card videos have both, but no `autoplay` attribute. `motion.js`
+(section 7) watches each one with an IntersectionObserver (`threshold: 0.5`: half of
+it on screen) and plays it only then, pausing it when it leaves; hovering a card
+plays it too. Anything that moves for more than 5 seconds needs a way to stop it, so
+a Pause button appears once the video plays. With reduced motion, nothing runs: you
+see the poster.
+
+### Step 5: the frame and the crop
+
+Every tile is a box with `aspect-ratio: 16 / 10`, and the video or photo inside gets
+`width: 100%; height: 100%; object-fit: cover`: it fills the box and its edges are
+trimmed if its shape differs. The About photo does the same with a 4:5 portrait
+frame. The whole card is one link: the title's `<a>` has an invisible `::after`
+layer stretched over the card (`position: absolute; inset: 0`).
+
+### Step 6: the funnel
+
+The Internship Radar funnel (`funnel` in `pages.lisp`) is an ordered list, so a
+screen reader reads "~16,000 listings scanned". Each bar's length comes from Lisp as
+`--w`, on a log scale (with a straight scale, 7 out of 16,000 would be invisible).
+The bars start at `transform: scaleX(0)` and grow to full length when the funnel
+scrolls into view, one after another (`--i`), with the same reveal as everything else.
+
+### Preparing the files
+
+`scripts/prepare-media.sh` (README, section 7) turns originals into web versions and
+removes the photos' metadata. Plain `sips` keeps a phone photo's GPS position, so
+the script uses a small Swift helper (Swift comes with macOS) and then checks the
+result with `sips -g all`.
 
 ---
 

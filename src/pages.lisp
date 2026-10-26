@@ -703,89 +703,172 @@ starts once the picture is complete."
        ,(diagram-text diagram))))
 
 ;;; ------------------------------------------------------------------
-;;; The demo video (only when its file exists)
+;;; The demo video (only when its file exists, see media.lisp)
 ;;; ------------------------------------------------------------------
 
-(defun static-path (file)
-  "Where FILE sits in the static/ folder, e.g. static/event-market.mp4."
-  (merge-pathnames (concatenate 'string "static/" file) (project-root)))
-
-(defun mp4-size (path)
-  "The (width height) of the video in the .mp4 file at PATH, or NIL if we can't
-tell. An .mp4 file is a list of \"boxes\", each one starting with its size (4 bytes)
-and a 4-letter type. The \"tkhd\" box (track header) ends with the track's width
-and height, 4 bytes each, as \"16.16 fixed point\" numbers: the top 16 bits are the
-whole part, so (ASH n -16) drops the fraction. A sound track's width is 0, so we
-keep the first track whose width isn't. Knowing the size lets the page reserve the
-video's space before it loads, so nothing below it jumps."
-  (let ((bytes (with-open-file (in path :element-type '(unsigned-byte 8))
-                 (let ((all (make-array (file-length in) :element-type '(unsigned-byte 8))))
-                   (read-sequence all in)
-                   all)))
-        (tag (map 'vector #'char-code "tkhd")))
-    (flet ((u32 (i)                     ; 4 bytes at I as one number, biggest byte first
-             (if (and (>= i 0) (<= (+ i 4) (length bytes)))
-                 (logior (ash (aref bytes i) 24) (ash (aref bytes (+ i 1)) 16)
-                         (ash (aref bytes (+ i 2)) 8) (aref bytes (+ i 3)))
-                 0)))
-      (loop for at = (search tag bytes) then (search tag bytes :start2 (1+ at))
-            while at
-            do (let* ((start (- at 4))
-                      (size (u32 start))
-                      (width (ash (u32 (+ start size -8)) -16))
-                      (height (ash (u32 (+ start size -4)) -16)))
-                 (when (and (>= start 0) (>= size 84) (plusp width) (plusp height))
-                   (return (list width height))))))))
-
 (defun demo-video (video live-url)
-  "A looping, silent screen recording, or NIL when the file isn't in static/
-(PROBE-FILE returns NIL for a missing file). VIDEO is the project's :video plist.
-There is no `autoplay`: without JavaScript, or under reduced motion, the video
-waits with the browser's own controls until you press play. Otherwise motion.js
-swaps those controls for a small Pause button and plays it, muted, while it's on screen."
-  (destructuring-bind (&key file poster caption) video
-    (when (and file (probe-file (static-path file)))
-      (destructuring-bind (width height)
-          (or (mp4-size (static-path file)) '(1600 1000)) ; a guess if the file won't say
+  "The video under a case study's header, or NIL when its file isn't in static/.
+VIDEO is the project's :video plist. Two kinds:
+  - silent (a screen recording): it loops, muted. There is no `autoplay`: without
+    JavaScript, or under reduced motion, it waits with the browser's own controls
+    until you press play. Otherwise motion.js swaps those controls for a small
+    Pause button and plays it while it's on screen.
+  - :sound t (a demo with a voice-over): the browser's controls, and nothing is
+    downloaded until you press play (see SOUND-VIDEO in media.lisp)."
+  (destructuring-bind (&key file poster caption sound) video
+    (when (static-file-p file)
+      (destructuring-bind (width height) (video-size file)
         `(:figure :class "demo" :data-reveal t
            (:div :class "demo-frame"
-            (:video :class "demo-video" :data-demo-video t
-                    :width ,width :height ,height
-                    :poster ,(when (and poster (probe-file (static-path poster))) poster)
-                    :muted t :loop t :playsinline t :preload "metadata" :controls t
-             (:source :src ,file :type "video/mp4"))
-            (:button :type "button" :class "diagram-toggle demo-toggle" :data-demo-toggle t
-                     :hidden t :aria-label "Pause video" "Pause"))
+            ,@(if sound
+                  (list (sound-video file poster caption))
+                  `((:video :class "demo-video" :data-demo-video t
+                            :width ,width :height ,height
+                            :poster ,(poster-or-nil poster)
+                            :muted t :loop t :playsinline t :preload "metadata" :controls t
+                      (:source :src ,file :type "video/mp4"))
+                    (:button :type "button" :class "diagram-toggle demo-toggle" :data-demo-toggle t
+                             :hidden t :aria-label "Pause video" "Pause"))))
            (:figcaption :class "diagram-caption"
             (:span ,caption
                    ,(when live-url
                       `(" " (:a :href ,live-url "Live demo"
                                 (:span :class "arrow" :aria-hidden "true" " ↗")))))))))))
 
+;;; ------------------------------------------------------------------
+;;; The funnel: a few numbers, each with a bar that grows into place
+;;; ------------------------------------------------------------------
+
+(defun funnel-width (count biggest)
+  "How long COUNT's bar is, as a percentage of the longest one, on a log scale.
+With a straight scale, 7 out of 16,000 would be a bar 0.04% long: invisible. LOG
+counts the digits instead (roughly), so each step down the funnel is a visible
+step. The smallest bar is at least 4% long."
+  (max 4 (* 100 (/ (log (max count 1)) (log (max biggest 2))))))
+
+(defun funnel (funnel &key mini)
+  "The :funnel of a project as a list of bars. It's a real <ol>: a screen reader
+reads \"~16,000 listings scanned\", and the bars are only decoration (aria-hidden).
+--w is a bar's length and --i its place in the list: the CSS grows each bar from
+the left when the funnel scrolls into view, one after another.
+MINI is the small version drawn on a project card: decorative, so all of it is
+hidden from screen readers (the card's text says what the project is)."
+  (destructuring-bind (&key steps caption &allow-other-keys) funnel
+    (let* ((biggest (reduce #'max (mapcar #'second steps)))
+           (bars `(:ol :class "funnel-steps"
+                    ,@(loop for (value count label) in steps
+                            for i from 0
+                            collect `(:li :style ,(format nil "--w: ~,1f%; --i: ~d"
+                                                          (funnel-width count biggest) i)
+                                       (:span :class "funnel-value" ,value)
+                                       (:span :class "funnel-label" ,label)
+                                       (:span :class "funnel-bar" :aria-hidden "true"))))))
+      (if mini
+          `(:div :class "funnel funnel-mini" :aria-hidden "true" ,bars)
+          `(:figure :class "funnel" :data-reveal t
+             ,bars
+             (:figcaption :class "diagram-caption" (:span ,caption)))))))
+
+;;; ------------------------------------------------------------------
+;;; A photo gallery: every picture in one folder, if there are any
+;;; ------------------------------------------------------------------
+
+(defun gallery (gallery project-name)
+  "The pictures in the :gallery's :folder, or NIL if it has none. The Nth photo
+gets the Nth text of :alts; a photo without one gets a plain description built
+from the project's name, so no picture is ever left without alt text."
+  (destructuring-bind (&key folder alts &allow-other-keys) gallery
+    (let ((files (media-folder folder)))
+      (when files
+        `(:ul :class "gallery" :data-reveal t
+           ,@(loop for file in files
+                   for n from 1
+                   collect `(:li ,(picture file
+                                           (or (nth (1- n) alts)
+                                               (format nil "~a: photo ~d from the event" project-name n))
+                                           :class "gallery-photo"))))))))
+
+;;; ------------------------------------------------------------------
+;;; Project cards: a picture or a moving loop on top, the text below
+;;; ------------------------------------------------------------------
+
 (defun case-study-path (slug)
   "The file a project's page is written to: \"internship-radar\" -> \"internship-radar.html\"."
   (format nil "~a.html" slug))
 
+(defun card-fallback (project)
+  "What the top of a card shows when the project has no photo or video (yet).
+Never a fake picture: something drawn from the project's own data.
+  :stat (\"1st\" \"of 120\")  a big number, set in type
+  :stat :lines-of-lisp      the same, but the number is counted during the build
+  :funnel                   a small copy of the project's funnel
+  :diagram                  a small copy of the project's diagram
+COND tries each one in that order."
+  (destructuring-bind (&key slug stat funnel diagram &allow-other-keys) project
+    (cond ((eq stat :lines-of-lisp)
+           `(:div :class "card-tile" :aria-hidden "true"
+              (:span :class "card-tile-big" (:span :class "c-paren" "(") "λ" (:span :class "c-paren" ")"))
+              (:span :class "card-tile-note" ,(format nil "~:d lines of Common Lisp" (lines-of-lisp)))))
+          (stat
+           `(:div :class "card-tile" :aria-hidden "true"
+              (:span :class "card-tile-big" ,(first stat))
+              (:span :class "card-tile-note" ,(second stat))))
+          (funnel (funnel funnel :mini t))
+          (diagram
+           ;; The same SVG as on the project page, just smaller. Its ids get a
+           ;; "card-" prefix so they don't clash with anything else on the page.
+           `(:div :class "card-diagram" :aria-hidden "true"
+              ,(diagram-svg diagram :wide (format nil "card-~a" slug))))
+          (t nil))))
+
+(defun card-media (project)
+  "The top of a card: the :card video or image if its file exists, else the fallback."
+  (destructuring-bind (&key card &allow-other-keys) project
+    (destructuring-bind (&key video poster image alt) card
+      (let ((media (cond (video (loop-video video poster))
+                         (image (picture image alt :class "card-image")))))
+        `(:div :class ,(if media "card-media" "card-media is-fallback")
+           ,(or media (card-fallback project))
+           ;; Only a looping video needs a Pause button (hidden until motion.js plays it).
+           ,(when (and media video)
+              '(:button :type "button" :class "diagram-toggle media-toggle"
+                        :data-loop-toggle t :hidden t :aria-label "Pause video" "Pause")))))))
+
 (defun project-card (i project)
   ;; &allow-other-keys: the plist also has :stats, :sections... that the card ignores.
-  (destructuring-bind (&key name slug url summary tags &allow-other-keys) project
-    `(:li :class "card" :data-reveal t :style ,(stagger i)
-       ;; The arrows are decoration (aria-hidden): the link's name is the project's name.
-       (:h3 ,(cond (slug `(:a :href ,(case-study-path slug) ,name
-                              (:span :class "arrow" :aria-hidden "true" " →")))
-                   (url `(:a :href ,url ,name (:span :class "arrow" :aria-hidden "true" " ↗")))
-                   (t name)))
-       (:p ,summary)
-       (:ul :class "tags"
-        ,@(mapcar (lambda (tag) `(:li ,tag)) tags)))))
+  (destructuring-bind (&key name slug url summary blurb tags featured &allow-other-keys) project
+    (let ((href (or (and slug (case-study-path slug)) url)))
+      `(:li :class ,(if featured "card card-featured" "card card-compact")
+            :data-reveal t :style ,(stagger i)
+         ,(card-media project)
+         (:div :class "card-body"
+          ;; The title's link covers the whole card (.card-link::after in the CSS),
+          ;; so the picture is clickable too, while the link's name stays the title.
+          ;; The arrows are decoration (aria-hidden).
+          (:h3 ,(if href
+                    `(:a :class "card-link" :href ,href ,name
+                         (:span :class "arrow" :aria-hidden "true" ,(if slug " →" " ↗")))
+                    name))
+          (:p ,(or blurb summary))
+          (:ul :class "tags"
+           ,@(mapcar (lambda (tag) `(:li ,tag)) tags)))))))
+
+(defun insert-part (parts part after)
+  "PARTS with PART added right after the part whose heading is AFTER (or at the
+end if no part has that heading). The parts are numbered afterwards, so the
+numbers stay in order either way."
+  (let* ((found (position after parts :key #'first :test #'equal))
+         (at (if found (1+ found) (length parts))))
+    (append (subseq parts 0 at) (list part) (subseq parts at))))
 
 (defun case-study (project)
   "A full page for one project: a header with its numbers and links, then one
 numbered section per part of the story. Returns a list of trees, one per block."
-  (destructuring-bind (&key name slug summary tags links stats video sections diagram
-                       &allow-other-keys) project
+  (destructuring-bind (&key name slug summary tags links stats video sections
+                         diagram funnel gallery &allow-other-keys) project
     ;; MULTIPLE-VALUE-BIND catches the values CASE-STUDY-SOURCES returns.
-    (multiple-value-bind (hero-panel part-panels diagram-panel) (case-study-sources project)
+    (multiple-value-bind (hero-panel part-panels diagram-panel funnel-panel gallery-panel)
+        (case-study-sources project)
       (let ((parts
               ;; One (heading panel content) list per part of the story.
               ;; (heading . paragraphs) splits ("How it works" "p1" "p2") into the
@@ -794,19 +877,22 @@ numbered section per part of the story. Returns a list of trees, one per block."
                     for panel in part-panels
                     collect (list heading panel
                                   (list `(:div :class "prose" :data-reveal t
-                                           ,@(mapcar (lambda (p) `(:p ,p)) paragraphs)))))))
-        ;; A diagram becomes a part of its own, right after the part named by its
-        ;; :after (or at the end if no part has that name). The parts are numbered
-        ;; afterwards, so the numbers stay in order either way.
+                                           ,@(mapcar (lambda (p) `(:p ,p)) paragraphs))))))
+            (photos (when gallery (gallery gallery name))))
+        ;; A diagram or a funnel becomes a part of its own, right after the part
+        ;; named by its :after. The photos, if there are any, come last.
         (when diagram
-          (let ((at (let ((after (position (getf diagram :after) parts
-                                           :key #'first :test #'equal)))
-                      (if after (1+ after) (length parts)))))
-            (setf parts (append (subseq parts 0 at)
-                                (list (list (getf diagram :heading) diagram-panel
-                                            (list (diagram-figure diagram
-                                                                  (format nil "~a-diagram" slug)))))
-                                (subseq parts at)))))
+          (setf parts (insert-part parts
+                                   (list (getf diagram :heading) diagram-panel
+                                         (list (diagram-figure diagram (format nil "~a-diagram" slug))))
+                                   (getf diagram :after))))
+        (when funnel
+          (setf parts (insert-part parts
+                                   (list (getf funnel :heading) funnel-panel (list (funnel funnel)))
+                                   (getf funnel :after))))
+        (when photos
+          (setf parts (append parts
+                              (list (list (getf gallery :heading) gallery-panel (list photos))))))
         (case-study-page name summary tags links stats video hero-panel parts)))))
 
 (defun case-study-page (name summary tags links stats video hero-panel parts)
@@ -834,6 +920,20 @@ then one numbered section per part. PARTS is a list of (heading panel content)."
             for n from 1
             collect (section-with-source (format nil "part-~d" n) n heading panel content))))
 
+(defun about ()
+  "The About text, with the photo beside it once static/media/about-running.jpg
+exists (*ABOUT-PHOTO* in content.lisp). Without the photo it's the text alone,
+exactly as before: no empty box waiting for a picture."
+  (let ((text `(:div :class "prose" :data-reveal t
+                 ,@(mapcar (lambda (paragraph) `(:p ,paragraph)) *about*)))
+        (photo (destructuring-bind (&key file alt) *about-photo*
+                 (picture file alt :class "about-photo"))))
+    (if photo
+        `(:div :class "about-grid"
+           ,text
+           (:figure :class "about-figure" :data-reveal t :style ,(stagger 1) ,photo))
+        text)))
+
 ;;; ------------------------------------------------------------------
 ;;; Pages
 ;;; ------------------------------------------------------------------
@@ -841,11 +941,11 @@ then one numbered section per part. PARTS is a list of (heading panel content)."
 (defpage "index.html" (:title *name* :description *intro* :home-page t)
   (hero)
   (section "about" 1 "About"
-           `(:div :class "prose" :data-reveal t
-              ,@(mapcar (lambda (paragraph) `(:p ,paragraph)) *about*)))
+           (about))
   (section "work" 2 "Experience"
            (timeline *experience*))
   (section "projects" 3 "Projects"
+           `(:p :class "section-intro" :data-reveal t ,*projects-intro*)
            `(:ul :class "cards"
               ,@(loop for (i project) in (numbered *projects*)
                       collect (project-card i project))))
