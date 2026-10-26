@@ -187,7 +187,7 @@ animation stays short.")
      ;; A 9-second silent loop for the home page card: the agent walking the graph,
      ;; cut from a screen recording of the live demo. Without the file, the card
      ;; would show a small copy of the schema diagram below instead.
-     :card (:video "media/event-market-card.mp4" :poster "media/event-market-poster.jpg")
+     :card (:video "media/event-market-card.mp4" :poster "media/event-market-card-poster.jpg")
      :links (("Live demo" "https://event-market-graph-ten.vercel.app")
              ("Code" "https://github.com/victorhenz241-eng/graphdb-event-market"))
      :stats (("6" "market series: Brent, WTI, EURUSD, USDJPY, US 10Y, VIX")
