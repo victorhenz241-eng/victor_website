@@ -127,13 +127,14 @@ animation stays short.")
      :video (:file "media/cut-the-line-demo.mp4"
              :poster "media/cut-the-line-poster.jpg"
              :sound t
-             :caption "The product demo (1 min 48 s, with sound).")
+             :caption "The product demo (1 min 10 s, with sound).")
      ;; Photos from the event: every .jpg in static/media/cut-the-line/, sorted by
      ;; name. One description per photo, in the same order. No photos, no section.
-     ;; private: Victor to add the podium photos and one alt text per photo
      :gallery (:folder "media/cut-the-line/"
-               :heading "On the podium"
-               :alts ())
+               :heading "At the hackathon"
+               :alts ("Our team on stage after the results, under a screen that reads: Cut the Line, winner of Secure Horizons 2026."
+                      "Pitching the business model on stage."
+                      "The team at work on laptops around a table during the hackathon."))
      :sections
      (("The challenge"
        "Phone scams aimed at older people follow the same script: a relative in trouble, a fake bank advisor or a fake police officer, pushing for an urgent payment and asking to keep it secret. A few seconds of public audio are now enough to clone a voice, and the number on screen can be spoofed."
@@ -151,7 +152,7 @@ animation stays short.")
       ("Stack"
        "Python 3.12 and FastAPI in a hexagonal architecture, Twilio (Media Streams, Conference, Voice JS SDK), Amazon Transcribe streaming, Claude on Amazon Bedrock, wav2vec2 for synthetic voices, SQLite for call metadata.")
       ("Result"
-       "First place among 120 participants at the Secure Horizons 2026 hackathon at ESSEC, in October 2026, and the €7,000 prize."))
+       "First place among 120 participants at the Secure Horizons 2026 hackathon at ESSEC, in October 2026, and the €7,000 prize. Built in 36 hours, chosen by 12 jury members."))
      ;; The score, drawn like the other diagrams (see DIAGRAM-SVG). The weights and
      ;; thresholds are the real ones from the project's README.
      :diagram
