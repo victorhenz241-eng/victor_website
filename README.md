@@ -16,6 +16,7 @@ victor-site/
 │   ├── content.lisp       # ← your text lives here
 │   ├── source.lisp        # "(λ) source": slices and colors the real Lisp source
 │   ├── stats.lisp         # the footer's build numbers, measured during the build
+│   ├── media.lisp         # photos and videos: shown only if the file exists, sizes read from the bytes
 │   ├── pages.lisp         # layout, building blocks, defpage macro
 │   └── build.lisp         # writes everything into public/
 ├── static/
@@ -23,7 +24,11 @@ victor-site/
 │   ├── motion.js          # scroll reveal, terminal, header + nav state, diagrams, demo video
 │   ├── command-menu.js    # the ⌘K menu
 │   ├── source-view.js     # the "(λ) source" switch
-│   └── favicon.svg        # the tab icon (a λ that follows light/dark mode)
+│   ├── favicon.svg        # the tab icon (a λ that follows light/dark mode)
+│   └── media/             # photos and videos (made with scripts/prepare-media.sh)
+├── scripts/
+│   ├── prepare-media.sh   # originals -> small web versions, metadata removed
+│   └── media.swift        # the helper it calls (Swift comes with macOS)
 ├── .claude/settings.json  # puts Claude Code in "Learning" mode for this project
 ├── .github/workflows/     # auto-deploy to GitHub Pages
 └── public/                # the built site (made by the build, not in git)
@@ -93,8 +98,24 @@ A checklist. None of these can be done by the code for you.
       `*base-path*` in `content.lisp` to match (the 404 page depends on it). If you buy
       a domain, set `*domain*` instead (section 6): the build then also writes
       `CNAME`, the `canonical` link and `og:url`.
-- [ ] **Record the demo video** for the Event-Market page (section 7). Until then the
-      page simply has no video.
+- [ ] **Drop in your media** (section 7). Each file appears on the site as soon as it
+      exists in `static/media/` and you rebuild. Until then the page falls back
+      gracefully (no broken image, no empty box):
+
+      | File in `static/media/` | Where it shows | Until then |
+      |---|---|---|
+      | `about-running.jpg` | beside the About text | text only |
+      | `cut-the-line/01.jpg`, `02.jpg`… | "On the podium", on the Cut the Line page (sorted by name) | no section |
+      | `event-market-card.mp4` + `event-market-card.jpg` | the Event-Market card on the home page | a small copy of its diagram |
+
+      Then describe each photo for people who can't see it: `:alt` in `*about-photo*`,
+      and the `:alts` list of the Cut the Line `:gallery` (one string per photo, same
+      order) in `content.lisp`. Delete the `private:` notes next to them.
+- [ ] **Confirm the Cut the Line text.** "My part" was written from the repo's commit
+      history (a `private: Victor to confirm role wording` note sits above it). Reword
+      it as you see fit.
+- [ ] **Record the Event-Market demo video** for its page (`static/event-market.mp4`,
+      section 7). Until then the page simply has no video.
 - [ ] **Review the About text.** Its second paragraph is a draft written from the CV.
       In `content.lisp` it has a `;; private: DRAFT` note above it (never shown on the
       site). Rewrite it in your own voice, then delete the note.
@@ -122,41 +143,63 @@ A checklist. None of these can be done by the code for you.
 3. At your registrar, add the DNS records GitHub shows under *Settings → Pages → Custom domain*.
 4. Tick **Enforce HTTPS** once it's available.
 
-## 7. Add the demo video (Event-Market Graph page)
+## 7. Photos and videos
 
-The Event-Market page shows a short, silent screen recording under its header,
-but only once `static/event-market.mp4` exists. Until then the page has no video
-(see `:video` in `content.lisp` and LEARN.md, Effect 12).
+Everything goes through one script, which only uses tools that come with macOS
+(`sips`, and Swift for `scripts/media.swift`). Run it from the project folder. The
+last argument is the file name inside `static/media/`: lowercase letters, digits and
+dashes, **no spaces** (a space in a web address becomes `%20` and breaks easily).
 
-1. **Record.** Open the live demo, press **⌘⇧5**, choose *Record Selected Portion*,
-   frame the browser window and record 15–20 seconds of one agent run. Stop it from
-   the menu bar. macOS saves a `.mov` on the Desktop with the date in its name;
-   rename it `recording.mov`.
-2. **Convert** to a small, silent H.264 mp4 (install ffmpeg with `brew install ffmpeg`):
+```sh
+# A photo (JPEG, HEIC, PNG): long edge 1600 px, JPEG quality 80, turned upright,
+# and every bit of metadata removed: GPS position, phone model, date.
+scripts/prepare-media.sh photo ~/Desktop/IMG_1234.HEIC about-running.jpg
+mkdir -p static/media/cut-the-line
+scripts/prepare-media.sh photo ~/Desktop/podium.jpg cut-the-line/01.jpg
 
-   ```sh
-   ffmpeg -i ~/Desktop/recording.mov -t 20 -an \
-     -vf "fps=30,scale=1280:-2" -c:v libx264 -profile:v high -pix_fmt yuv420p \
-     -preset slow -crf 28 -movflags +faststart static/event-market.mp4
-   ```
+# A demo with sound, for a case-study page: 720p H.264 at ~700 kbit/s (about 5 MB a minute).
+scripts/prepare-media.sh video ~/Desktop/demo.mov my-demo.mp4
 
-   `-an` drops the sound, `scale=1280:-2` makes it 1280 px wide (the height follows,
-   rounded to an even number), `-crf 28` sets the quality (higher = smaller),
-   `yuv420p` makes it play everywhere, `+faststart` lets it start before it has fully
-   downloaded. Check the size with `ls -lh static/event-market.mp4`: aim for 3 MB or
-   less. Too big? Try `-crf 32`, a shorter `-t`, or `scale=960:-2`.
-3. **Poster (optional):** the image shown before the video plays.
+# A short silent loop for a card: 8 seconds starting at 0:59, no sound.
+scripts/prepare-media.sh clip ~/Desktop/demo.mov my-card.mp4 59 8
 
-   ```sh
-   ffmpeg -i static/event-market.mp4 -frames:v 1 -q:v 3 static/event-market-poster.jpg
-   ```
+# A poster: the frame at 1:04, shown before a video plays (and instead of it
+# when someone asks their system for less motion).
+scripts/prepare-media.sh poster ~/Desktop/demo.mov my-poster.jpg 64
+```
 
-4. **Rebuild** (`sbcl --script make.lisp`). The build reads the video's width and
-   height from the file. Delete the file and rebuild to remove the video again.
+After each picture the script prints its size and checks with `sips -g all` that no
+GPS, camera or date is left. Then rebuild (`sbcl --script make.lisp`).
+
+**Why not just `sips` and `avconvert`?** We tried both. `sips -s format jpeg -Z 1600`
+resizes well but *keeps* an iPhone photo's GPS position. And `avconvert` only has
+fixed presets: its 720p one turned the 108-second Cut the Line demo into 98 MB (the
+1080p original is 27 MB). `media.swift` uses the same Apple frameworks but lets us
+choose the bitrate: the same demo is 10.5 MB at 720p.
+
+**Keep the repo light.** GitHub warns about files over 50 MB and refuses them over
+100 MB. Keep every file under 15 MB (for a long demo, lower the bitrate:
+`scripts/prepare-media.sh video demo.mov my-demo.mp4 500`). `ls -lh static/media`
+shows the sizes.
+
+**The Event-Market videos**, once you've recorded the demo (⌘⇧5, *Record Selected
+Portion*, 15–20 s of one agent run, saved on the Desktop as `recording.mov`):
+
+```sh
+scripts/prepare-media.sh clip ~/Desktop/recording.mov event-market-card.mp4 0 8
+scripts/prepare-media.sh poster ~/Desktop/recording.mov event-market-card.jpg 4
+# The looping, silent video on its own page lives in static/, not static/media/:
+swift scripts/media.swift video ~/Desktop/recording.mov static/event-market.mp4 --no-audio --kbps 900
+swift scripts/media.swift frame ~/Desktop/recording.mov static/event-market-poster.jpg --start 4
+```
+
+The build reads each video's width and height from the file, so the page reserves
+its space before the video loads. Delete a file and rebuild to remove it again.
 
 ## Next steps
 
-**Content:** every sentence in `content.lisp` comes from the CV. See "Before you
+**Content:** every sentence in `content.lisp` comes from the CV or from the projects'
+own READMEs (the Radar funnel numbers were counted in the live system). See "Before you
 publish" above for the About draft and the CV. Keep `*repl*` factual and to four commands.
 
 **Lisp**
@@ -170,7 +213,8 @@ publish" above for the About draft and the CV. Keep `*repl*` factual and to four
 - [x] A ⌘K command menu generated from the data.
 - [x] A "(λ) source" switch that shows the real Lisp behind each section.
 - [x] Diagrams generated from data on the project pages, drawing themselves (LEARN.md, Effect 11).
-- [ ] Record the Event-Market demo video (section 7).
+- [x] Media-led project cards: a looping video or a photo on top, or a tile drawn from the data.
+- [ ] Record the Event-Market demo video and its card loop (section 7).
 - [ ] Add a second animated "mockup": a small chart that draws itself would suit a data person.
 
 **Learning:** LEARN.md starts with a reading order, the concepts behind each file and
