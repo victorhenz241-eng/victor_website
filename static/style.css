@@ -554,8 +554,28 @@ kbd {
    arrow labels (5px tall at this size, unreadable) are left out. */
 .card-diagram .edge-line,
 .card-diagram .node rect { stroke: var(--muted); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
-.card-diagram .edge-head { fill: var(--muted); }
-.card-diagram .node-label { fill: var(--text); font-size: 15px; }
+/* The arrowheads shrink with the picture while the lines don't (non-scaling
+   stroke), so they went almost invisible: a stroke of the same width, with
+   round corners, brings them back to the lines' weight. */
+.card-diagram .edge-head {
+  fill: var(--muted);
+  stroke: var(--muted);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+/* On the project page a box holds two lines: the name sits just above the
+   middle (Lisp puts its baseline at y - 2) and the note goes under it. Here the
+   note is gone, so the name has to move down to the middle by itself, or it
+   hangs in the top half of an empty box. dominant-baseline: central puts the
+   middle of the letters (not their baseline) on y; translateY(2px) undoes the
+   "- 2" (inside an SVG, px are the picture's own units). */
+.card-diagram .node-label {
+  fill: var(--text);
+  font-size: 15px;
+  dominant-baseline: central;
+  transform: translateY(2px);
+}
 .card-diagram .node-note,
 .card-diagram .edge-label { display: none; }
 .card-media .funnel-mini { width: 100%; padding: var(--s3) var(--s4); }
