@@ -101,11 +101,11 @@ animation stays short.")
   ;; projects on this site, where they were part of what I built myself.
   '(("AI & data"
      "LLM agents" "LLM evaluation" "Text-to-SQL" "Semantic modeling"
-     "Snowflake Cortex Analyst" "Snowflake Cortex Agents" "Claude on Amazon Bedrock" "Neo4j")
+     "Snowflake Cortex Analyst" "Snowflake Cortex Agents" "Claude on Amazon Bedrock")
     ("Languages & frameworks"
      "Python" "SQL" "TypeScript" "Next.js" "FastAPI" "React" "Common Lisp")
     ("Infrastructure & tools"
-     "Docker" "Google Cloud Run" "Vercel" "Supabase" "n8n" "Git"))
+     "Docker" "Neo4j" "Google Cloud Run" "Vercel" "Supabase" "n8n" "Git"))
   "The toolbox, grouped so a reader can scan it in a few seconds.")
 
 (defparameter *languages*
