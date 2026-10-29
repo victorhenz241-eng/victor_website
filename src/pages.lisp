@@ -289,6 +289,17 @@ a text box that controls a list box of options, grouped under small mono labels.
          (:span (:kbd "↵") " open")
          (:span (:kbd "esc") " close"))))))
 
+(defun asset-url (name base)
+  "The address of static/NAME with a fingerprint of its contents, e.g. \"style.css?v=3f9a2c1b\".
+Browsers keep CSS and JS files in a cache. Without the fingerprint, a browser can
+pair today's HTML with yesterday's stylesheet and the page breaks. When the file
+changes, its fingerprint (and so its address) changes, and the browser has to
+fetch it again. SXHASH turns a string into a number that depends only on its
+characters; ~(~x~) writes that number in lowercase hexadecimal."
+  (let ((text (uiop:read-file-string (merge-pathnames name (merge-pathnames "static/" (project-root)))
+                                     :external-format :utf-8)))
+    (format nil "~@[~a~]~a?v=~(~x~)" base name (sxhash text))))
+
 (defun layout (&key title description path base home-page noindex toc rail-title body)
   "The HTML shared by every page. BASE is NIL for normal pages, which keeps every
 link relative (\"style.css\"), so the site works at any address. Given a BASE like
@@ -337,12 +348,12 @@ TOC and RAIL-TITLE are for the side rail (see SITE-HEADER and DEFPAGE)."
         (:link :rel "preconnect" :href "https://fonts.googleapis.com")
         (:link :rel "preconnect" :href "https://fonts.gstatic.com" :crossorigin t)
         (:link :rel "stylesheet" :href ,*font-url*)
-        ;; ~@[...~] in FORMAT prints its contents only when the argument isn't NIL.
-        (:link :rel "stylesheet" :href ,(format nil "~@[~a~]style.css" base))
+        ;; ASSET-URL adds a fingerprint, so a browser never mixes new HTML with old CSS.
+        (:link :rel "stylesheet" :href ,(asset-url "style.css" base))
         ;; defer = download now, run after the HTML is parsed.
-        (:script :src ,(format nil "~@[~a~]motion.js" base) :defer t)
-        (:script :src ,(format nil "~@[~a~]command-menu.js" base) :defer t)
-        (:script :src ,(format nil "~@[~a~]source-view.js" base) :defer t))
+        (:script :src ,(asset-url "motion.js" base) :defer t)
+        (:script :src ,(asset-url "command-menu.js" base) :defer t)
+        (:script :src ,(asset-url "source-view.js" base) :defer t))
        (:body :id "top"
         ;; The first thing Tab reaches: keyboard users can jump past the header
         ;; straight to the content. Off screen until it has the focus (style.css).
