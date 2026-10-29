@@ -256,6 +256,17 @@ animation stays short.")
              ("~250" "roles kept in the table")
              ("6" "n8n workflows")
              ("≈ €0" "a month, all free tiers"))
+     ;; An 8.5-second silent loop for the home page card: a role opens with its
+     ;; fit score, goes into the pipeline, and the pipeline board appears. Cut from
+     ;; a screen recording of the live app, with every company and person name
+     ;; blurred (the recording itself stays private, on Victor's computer).
+     :card (:video "media/internship-radar-card.mp4" :poster "media/internship-radar-card-poster.jpg")
+     ;; The edited demo (25 s): inbox, eligibility, filters, a role's fit score,
+     ;; the pipeline, then the people search. Silent (no :sound), so it loops
+     ;; while it's on screen, with a Pause button, like Event-Market's.
+     :video (:file "media/internship-radar-demo.mp4"
+             :poster "media/internship-radar-poster.jpg"
+             :caption "Recorded in the live app. Company and contact names are blurred.")
      :sections
      (("The problem"
        "Finding an internship has two hard parts. Aggregators list thousands of postings and most don't fit one person. And cold applications go through applicant-tracking systems where nothing comes back. The best channel is a warm contact at the company.")

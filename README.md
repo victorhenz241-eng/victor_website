@@ -108,6 +108,8 @@ A checklist. None of these can be done by the code for you.
       | `cut-the-line/01.jpg`, `02.jpg`… | "On the podium", on the Cut the Line page (sorted by name) | no section |
       | `event-market-card.mp4` + `event-market-poster.jpg` | the Event-Market card on the home page | a small copy of its diagram |
       | `event-market-demo.mp4` + `event-market-poster.jpg` | under the header of the Event-Market page, looping | no video |
+      | `internship-radar-card.mp4` + `internship-radar-card-poster.jpg` | the Internship Radar card on the home page | a small copy of its funnel |
+      | `internship-radar-demo.mp4` + `internship-radar-poster.jpg` | under the header of the Internship Radar page, looping | no video |
 
       Then describe each photo for people who can't see it: `:alt` in `*about-photo*`,
       and the `:alts` list of the Cut the Line `:gallery` (one string per photo, same
@@ -193,6 +195,20 @@ scripts/prepare-media.sh clip ~/Desktop/recording.mov event-market-card.mp4 4 9
 swift scripts/media.swift video ~/Desktop/recording.mov static/media/event-market-demo.mp4 --no-audio --kbps 1500
 swift scripts/media.swift frame ~/Desktop/recording.mov static/media/event-market-poster.jpg --start 8
 ```
+
+**The Internship Radar videos** come from an 81-second screen recording of the live
+app, edited down: `internship-radar-demo.mp4` (25 s, 1440×900, silent, it loops on
+the page) shows the inbox, the eligibility check, the filters, a role's fit score,
+the pipeline and the people search, with a short caption for each step;
+`internship-radar-card.mp4` (8.5 s, 960×600) is the fit score → pipeline moment. In
+both, every company name, person name and the people found by search are blurred,
+because recruiters at those companies may watch. The edit (cuts, blur, slow zooms,
+captions, the dissolve that makes the loop seamless) was done once with ffmpeg and a
+throwaway script, not with `prepare-media.sh`: the blur boxes come from reading the
+text in every frame (Apple's Vision framework), then each frame was checked again
+for names. If you ever redo them, check every frame for names before publishing. The
+posters are frames of the finished videos (`media.swift frame`, at 9.5 s and 3.2 s),
+so they are blurred too.
 
 The build reads each video's width and height from the file, so the page reserves
 its space before the video loads. Delete a file and rebuild to remove it again.
