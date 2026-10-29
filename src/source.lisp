@@ -338,7 +338,8 @@ readers (.sr-only). HEADING is a list of nodes, like *HEADLINE*."
     (cond ((string= id "about")     (panel "About" '((*about* *about-photo*))))
           ((string= id "work")      (panel "Experience" '((*experience*))))
           ((string= id "projects")  (panel "Projects" '((*projects-intro* *projects*)) :scroll t))
-          ((string= id "education") (panel "Education" '((*education*))))
+          ((string= id "skills")    (panel "Skills" '((*skills* *languages*))))
+          ((string= id "education") (panel "Education" '((*education* *outside-work* *outside-media*))))
           ((string= id "contact")   (panel "Contact" '((*links*) (*contact-line*)))))))
 
 (defun case-study-sources (project)

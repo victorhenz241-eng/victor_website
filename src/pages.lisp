@@ -81,8 +81,11 @@ isn't certain, and a wrong address in the head is worse than none."
   '(("about" "About")
     ("work" "Work" "experience")   ; an optional 3rd item: extra search words
     ("projects" "Projects")
-    ("education" "Education")
+    ("skills" "Skills" "toolbox stack languages")
+    ("education" "Education" "outside work sport leadership")
     ;; Keep Contact last: on phones the CSS hides every nav link but the last one.
+    ;; And keep the list short (six at most): every link is one more thing to read.
+    ;; "Outside work" has no link on purpose: it's a side note inside Education.
     ("contact" "Contact"))
   "(id label [search-words]) for each section of the home page. Two things are built from this
 one list: the links in the header and the \"Pages\" group of the command menu.
@@ -997,6 +1000,56 @@ no empty box waiting for a picture."
            (:figure :class "about-figure" :data-reveal t :style ,(stagger 1) ,photo))
         text)))
 
+(defun skills ()
+  "The toolbox as a definition list (<dl>): each group's name is a term (<dt>), and
+its skills are the description (<dd>), a row of small pills. A <dl> is the HTML for
+\"name: value\" pairs, so a screen reader announces the group with its skills.
+The spoken languages come last, as one more group: \"French, mother tongue\"."
+  `(:dl :class "skills" :data-reveal t
+     ,@(loop for (group . items) in *skills*
+             collect `(:div :class "skills-row"
+                        (:dt ,group)
+                        (:dd (:ul :class "tags skill-tags"
+                              ,@(mapcar (lambda (item) `(:li ,item)) items)))))
+     (:div :class "skills-row"
+      (:dt "Languages")
+      (:dd (:ul :class "tags skill-tags"
+            ,@(loop for (language level) in *languages*
+                    ;; The comma is for screen readers; the CSS hides it.
+                    collect `(:li ,language (:span :class "skill-level"
+                                              (:span :class "sr-only" ",") " " ,level))))))))
+
+(defun outside-work ()
+  "The \"Outside work\" block at the end of the Education section: sport and
+leadership, set smaller than the main content so it reads as a side note. The
+photo and the loop sit under the list, and each one shows only if its file exists
+(PICTURE and LOOP-VIDEO return NIL otherwise). No pictures, no figure at all."
+  (destructuring-bind (&key photo video caption) *outside-media*
+    (let ((photo (destructuring-bind (&key file alt) photo
+                   (picture file alt :class "outside-photo")))
+          (video (destructuring-bind (&key file poster alt) video
+                   (loop-video file poster :class "outside-video" :alt alt))))
+      `(:div :class "outside"
+         (:h3 :class "sublabel" :data-reveal t "Outside work")
+         (:ul :class "outside-list"
+          ,@(loop for (i item) in (numbered *outside-work*)
+                  collect (destructuring-bind (&key what dates text) item
+                            `(:li :data-reveal t :style ,(stagger i)
+                               (:p :class "outside-head"
+                                (:strong ,what) " " (:span :class "dates" ,dates))
+                               (:p ,text)))))
+         ,(when (or photo video)
+            `(:figure :class "outside-media" :data-reveal t
+               ,@(when photo (list photo))
+               ;; The loop and its Pause button share a wrapper: motion.js looks
+               ;; for the button next to the video (see section 7 of motion.js).
+               ,@(when video
+                   `((:div :class "outside-video-frame"
+                       ,video
+                       (:button :type "button" :class "diagram-toggle media-toggle"
+                                :data-loop-toggle t :hidden t :aria-label "Pause video" "Pause"))))
+               (:figcaption :class "diagram-caption" (:span ,caption))))))))
+
 ;;; ------------------------------------------------------------------
 ;;; Pages
 ;;; ------------------------------------------------------------------
@@ -1012,9 +1065,14 @@ no empty box waiting for a picture."
            `(:ul :class "cards"
               ,@(loop for (i project) in (numbered *projects*)
                       collect (project-card i project))))
-  (section "education" 4 "Education"
-           (timeline *education*))
-  (section "contact" 5 "Contact"
+  (section "skills" 4 "Skills"
+           `(:p :class "section-intro" :data-reveal t
+                "What I've worked with at Canal+, at hackathons and in the projects above.")
+           (skills))
+  (section "education" 5 "Education"
+           (timeline *education*)
+           (outside-work))
+  (section "contact" 6 "Contact"
            `(:div :class "contact" :data-reveal t
               (:p :class "contact-line" ,*contact-line*)
               ,(link-list))))

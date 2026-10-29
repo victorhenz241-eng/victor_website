@@ -10,7 +10,7 @@
  *   6. Sections & timeline  7. Cards  8. Contact & footer  9. MOTION
  *   10. Command menu (⌘K)   11. Source view ((λ) source)
  *   12. Diagrams & the demo video   13. Media: funnel, About photo, galleries
- *   14. Wide screens: the side rail
+ *   14. Wide screens: the side rail   15. Skills & Outside work
  */
 
 /* ---------- 1. Tokens ---------- */
@@ -275,7 +275,25 @@ kbd {
 .cmdk-button[hidden] { display: none; } /* our display:inline-flex would beat hidden */
 .cmdk-button:hover { color: var(--text); border-color: var(--faint); background: var(--surface); }
 
-@media (max-width: 34rem) {
+/* Six links, two buttons and the name don't fit in one bar on a small tablet.
+   So the bar gives things up in steps as the screen narrows:
+     under 52rem: "(λ)" without its word, and the two links whose sections are
+                  the easiest to reach by scrolling (About, right under the
+                  intro, and Education, just before Contact) are hidden;
+     under 44rem: only "Contact" is left (Search still reaches everything).
+   $= in an attribute selector means "ends with". */
+@media (max-width: 52rem) {
+  .site-header nav { gap: var(--s2); }
+  .site-header nav a[href$="#about"],
+  .site-header nav a[href$="#education"] { display: none; }
+  .source-toggle { padding: 0.25rem 0.5rem; }
+  .source-toggle-text {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip-path: inset(50%); white-space: nowrap;
+  }
+}
+
+@media (max-width: 44rem) {
   .site-header nav a:not(:last-child) { display: none; } /* keep just "Contact" on phones */
   .header-end { gap: var(--s2); }
   /* No keyboard on most phones: the chip becomes a plain "Search" pill. */
@@ -1391,6 +1409,124 @@ kbd {
      the home page's headline, and the "← All work" link of a project page. */
   .hero:not(.case-hero) > .view-rendered > .eyebrow,
   .case-hero .eyebrow { display: none; }
+}
+
+/* ---------- 15. Skills & Outside work ----------
+ *
+ * Skills: one row per group, the group's name on the left in small mono caps,
+ * its skills on the right as pills. Hairlines between rows, like a spec sheet:
+ * the eye runs down the left column, then across.
+ * Outside work: deliberately quieter than the sections around it (smaller text,
+ * muted color, small pictures), because it's a side note, not a headline.
+ */
+
+.skills { margin: 0; }
+.skills-row {
+  display: grid;
+  grid-template-columns: 12rem minmax(0, 1fr);  /* label column, then the pills */
+  gap: var(--s2);
+  padding: var(--s2) 0;
+  border-top: 1px solid var(--line);
+}
+.skills-row:last-child { border-bottom: 1px solid var(--line); }
+.skills dt {
+  padding-top: 0.25rem;            /* lines the label up with the pills' text */
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.skills dd { margin: 0; }
+/* The same pills as the cards' tags (.tags), one size up: here they ARE the content. */
+.skill-tags { gap: 0.4375rem; }
+.skill-tags li {
+  font-size: 0.8125rem;
+  padding: 0.1875rem 0.625rem;
+  color: var(--text);
+}
+.skill-level { color: var(--muted); }
+
+@media (max-width: 40rem) {
+  /* On a phone the label goes above its pills. */
+  .skills-row { grid-template-columns: minmax(0, 1fr); gap: var(--s1); }
+}
+
+/* Outside work: under the Education timeline, after a hairline. */
+.outside {
+  margin-top: var(--s6);
+  padding-top: var(--s4);
+  border-top: 1px solid var(--line);
+}
+.sublabel {
+  margin: 0 0 var(--s3);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+/* Two columns of short entries on wide screens, one on phones.
+   minmax(0, 1fr) lets a column shrink below its longest word. */
+.outside-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s3) var(--s4);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+}
+.outside-list p { margin: 0; color: var(--muted); }
+.outside-list .outside-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--s1);
+  margin-bottom: 0.25rem;
+  color: var(--text);
+}
+.outside-head strong { font-weight: 500; }
+.outside-head .dates { font-size: 0.75rem; }
+
+/* The pictures: the photo (2 parts) and the loop (3 parts) side by side, the
+   same height. The loop's frame sets that height with its 16:10 aspect-ratio.
+   The photo has height: 0 so it doesn't push the row taller (a portrait photo
+   would), then min-height: 100% stretches it back to the row's height, and
+   object-fit: cover crops it to fit. */
+.outside-media {
+  max-width: 40rem;
+  margin: var(--s4) 0 0;
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: var(--s2);
+}
+.outside-photo {
+  display: block;
+  width: 100%;
+  height: 0;
+  min-height: 100%;
+  object-fit: cover;
+  object-position: 50% 55%;        /* keep the runner, not the sky, in the crop */
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.outside-video-frame {
+  position: relative;              /* the Pause button is placed against it */
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.outside-video { display: block; width: 100%; height: 100%; object-fit: cover; }
+.outside-media figcaption { grid-column: 1 / -1; margin-top: 0; }
+
+@media (max-width: 40rem) {
+  .outside-list { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* People who ask their OS for less motion get none. Always include this. */

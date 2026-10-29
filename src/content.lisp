@@ -90,6 +90,26 @@ animation stays short.")
      :summary "Co-founded and launched an AI news app on the App Store, personalized to each user's profession and location. Built the personalization engine and a political-bias detector. Grew it to 2,000+ users, with coverage in the Luxembourg press."))
   "Newest first, one plist per role.")
 
+(defparameter *skills*
+  ;; Each list is (group skill skill ...). The first two groups' skills come from
+  ;; the CV; Claude, Neo4j, React, Supabase, n8n and Common Lisp come from the
+  ;; projects on this site, where they were part of what I built myself.
+  '(("AI & data"
+     "LLM agents" "LLM evaluation" "Text-to-SQL" "Semantic modeling"
+     "Snowflake Cortex Analyst" "Snowflake Cortex Agents" "Claude on Amazon Bedrock" "Neo4j")
+    ("Languages & frameworks"
+     "Python" "SQL" "TypeScript" "Next.js" "FastAPI" "React" "Common Lisp")
+    ("Infrastructure & tools"
+     "Docker" "Google Cloud Run" "Vercel" "Supabase" "n8n" "Git"))
+  "The toolbox, grouped so a reader can scan it in a few seconds.")
+
+(defparameter *languages*
+  '(("French" "mother tongue")
+    ("English" "bilingual")
+    ("German" "proficient")
+    ("Luxembourgish" "proficient"))
+  "(language level) pairs, in the CV's words.")
+
 (defparameter *education*
   '((:role "Exchange semester"
      :org "George Washington University"
@@ -101,6 +121,32 @@ animation stays short.")
      :place "France"
      :dates "2024 – 2028"
      :summary "GPA 4.0 / 4.0. Machine learning, computer vision, stochastic processes, algorithms, big data systems.")))
+
+(defparameter *outside-work*
+  '((:what "Track and field"
+     :dates "2021 – present"
+     :text "Represented Luxembourg in the 1500m at the European Youth Olympic Festival. National U18 champion in cross country and the 800m; runner-up at the senior indoor 800m nationals.")
+    (:what "Football"
+     :dates "2010 – 2024"
+     :text "Over a decade at a high level with Racing FC Union Luxembourg. MVP at NECIS Varsity in Amsterdam (2023).")
+    (:what "Class representative, AIDAMS"
+     :dates "2024 – present"
+     :text "Led a formal petition to the administration on how the GPA is computed.")
+    (:what "Founder, ELA Charity Week"
+     :dates "2023"
+     :text "Launched my school's first charity week, which raised €1,200+ for the ELA."))
+  "Sport and leadership, shown small under Education: a human detail, not a headline.")
+
+(defparameter *outside-media*
+  ;; A photo and a 4-second silent loop from the same day on the track. Like every
+  ;; picture on the site, each one shows only once its file exists in static/.
+  '(:photo (:file "media/outside-running.jpg"
+            :alt "Victor on a blue running track in the red and light-blue Luxembourg team kit, bib number 82.")
+    :video (:file "media/outside-running-finish.mp4"
+            :poster "media/outside-running-finish-poster.jpg"
+            :alt "Filmed from the stands: runners in the light-blue Luxembourg kit come down the home straight, and Victor, bib 82, crosses the finish line.")
+    :caption "On the track, June 2024.")
+  "The pictures beside the Outside work list. :alt describes each one.")
 
 (defparameter *projects-intro* "Here are some of my projects."
   "The line under the Projects label. The cards are a selection, not everything.")
