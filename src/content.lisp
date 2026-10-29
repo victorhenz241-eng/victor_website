@@ -46,10 +46,13 @@ the italic part gets its own <em> tag. Lisp data and HTML are the same thing her
   "Each string becomes one paragraph.")
 
 (defparameter *about-photo*
-  ;; private: add the race name to the alt text if you want (photo from June 2024)
-  '(:file "media/about-running.jpg"
-    :alt "Victor racing on a blue track in the red and light-blue Luxembourg national team kit.")
-  "A photo beside the About text. It only appears once the file exists in static/;
+  ;; private: Victor must supply a portrait: head and shoulders, face clearly visible,
+  ;; private: plain background, ideally portrait-shaped (it is cropped to 4:5).
+  ;; private: Prepare it with: scripts/prepare-media.sh photo ~/Desktop/IMG_xxxx.HEIC portrait.jpg
+  ;; private: Don't use a race photo here: the first picture should say "engineer".
+  '(:file "media/portrait.jpg"
+    :alt "Portrait of Victor Henz.")
+  "A portrait beside the About text. It only appears once the file exists in static/;
 until then the section is text only. :alt describes it for people who can't see it.")
 
 (defparameter *links*

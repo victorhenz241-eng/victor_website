@@ -984,9 +984,9 @@ then one numbered section per part. PARTS is a list of (heading panel content)."
             collect (section-with-source (format nil "part-~d" n) n heading panel content))))
 
 (defun about ()
-  "The About text, with the photo beside it once static/media/about-running.jpg
-exists (*ABOUT-PHOTO* in content.lisp). Without the photo it's the text alone,
-exactly as before: no empty box waiting for a picture."
+  "The About text, with the portrait beside it once static/media/portrait.jpg
+exists (*ABOUT-PHOTO* in content.lisp). Without the photo it's the text alone:
+no empty box waiting for a picture."
   (let ((text `(:div :class "prose" :data-reveal t
                  ,@(mapcar (lambda (paragraph) `(:p ,paragraph)) *about*)))
         (photo (destructuring-bind (&key file alt) *about-photo*
