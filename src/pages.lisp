@@ -77,6 +77,22 @@ isn't certain, and a wrong address in the head is worse than none."
   (when *domain*
     (format nil "https://~a/~a" *domain* (if (equal path "index.html") "" path))))
 
+(defun absolute-url (file)
+  "The full address of FILE (relative to the site's root) once published, e.g.
+\"https://victorhenz241-eng.github.io/victor_website/og.png\". With *DOMAIN* set,
+the site sits at the root of that domain; without it, at *PAGES-ORIGIN* followed
+by *BASE-PATH*. Unlike PAGE-URL, this always returns an address: a link preview
+needs one, and if it's wrong the only harm is a missing picture."
+  (if *domain*
+      (format nil "https://~a/~a" *domain* file)
+      (format nil "~a~a~a" *pages-origin* *base-path* file)))
+
+(defparameter *og-image*
+  '(:file "og.png" :width 1200 :height 630
+    :alt "Victor Henz. AI engineering, CentraleSupélec × ESSEC. I build AI tools on top of real data.")
+  "The link-preview picture (static/og.png, made by scripts/make-og.sh), its size
+in pixels, and its description for people who can't see it.")
+
 (defparameter *home-sections*
   '(("about" "About")
     ("work" "Work" "experience")   ; an optional 3rd item: extra search words
@@ -326,15 +342,21 @@ TOC and RAIL-TITLE are for the side rail (see SITE-HEADER and DEFPAGE)."
            `(:meta :name "description" :content ,description))
         ;; How a link to the page looks when it's shared (LinkedIn, Slack,
         ;; iMessage...): Open Graph tags, which most apps read, and a card type
-        ;; for X. There's no og:image on purpose: the apps then show a plain
-        ;; text card, which is better than an invented picture.
+        ;; for X. og:image is a plain card with the name and the headline
+        ;; (static/og.png, see scripts/make-og.sh), the same on every page.
+        ;; "summary_large_image" asks X to show it wide, above the title.
         (:meta :property "og:type" :content "website")
         (:meta :property "og:site_name" :content ,*name*)
         (:meta :property "og:title" :content ,title)
         ,(when description
            `(:meta :property "og:description" :content ,description))
         ,(when url `(:meta :property "og:url" :content ,url))
-        (:meta :name "twitter:card" :content "summary")
+        ,@(destructuring-bind (&key file width height alt) *og-image*
+            `((:meta :property "og:image" :content ,(absolute-url file))
+              (:meta :property "og:image:width" :content ,width)
+              (:meta :property "og:image:height" :content ,height)
+              (:meta :property "og:image:alt" :content ,alt)))
+        (:meta :name "twitter:card" :content "summary_large_image")
         ;; canonical = "this is the page's one true address", for search engines.
         ,(when url `(:link :rel "canonical" :href ,url))
         ,(when noindex '(:meta :name "robots" :content "noindex"))

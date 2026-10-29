@@ -27,6 +27,11 @@ and pointed it at GitHub Pages — the build then writes the CNAME file for you.
 the repo's name (github.io/victor_website/); with a domain it sits at the root.
 Only the 404 page uses this: normal pages keep relative links, which work anywhere.")
 
+(defparameter *pages-origin* "https://victorhenz241-eng.github.io"
+  "The GitHub Pages address of your account. Until *domain* is set, the site lives
+at this address followed by *base-path*. Only the link-preview picture uses it:
+apps like LinkedIn need that picture's full address, a relative one won't do.")
+
 (defparameter *eyebrow* "AI engineering · CentraleSupélec × ESSEC"
   "The small monospace line above the big headline.")
 
