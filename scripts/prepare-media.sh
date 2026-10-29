@@ -5,7 +5,7 @@
 #
 # Run it from the project folder:
 #
-#   scripts/prepare-media.sh photo ~/Desktop/IMG_1234.HEIC about-running.jpg
+#   scripts/prepare-media.sh photo ~/Desktop/IMG_1234.HEIC portrait.jpg
 #       A photo (JPEG, HEIC, PNG...): long edge at most 1600 px, JPEG quality 80,
 #       turned upright, and ALL metadata removed (GPS position, phone model, date).
 #

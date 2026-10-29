@@ -1,6 +1,6 @@
 ;;;; media.lisp — photos and videos, only when the file really exists.
 ;;;;
-;;;; content.lisp names media files ("media/about-running.jpg"). Before the build
+;;;; content.lisp names media files ("media/portrait.jpg"). Before the build
 ;;;; writes an <img> or a <video>, it checks the file is in static/ (PROBE-FILE).
 ;;;; No file, no tag: the page never shows a broken image, and it never shows a
 ;;;; grey placeholder pretending to be a picture. So the site is "true by

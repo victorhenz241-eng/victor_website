@@ -104,15 +104,16 @@ A checklist. None of these can be done by the code for you.
 
       | File in `static/media/` | Where it shows | Until then |
       |---|---|---|
-      | `about-running.jpg` | beside the About text | text only |
+      | `portrait.jpg` (you supply it: head and shoulders) | beside the About text | text only |
+      | `outside-running.jpg`, `outside-running-finish.mp4` + `-poster.jpg` | under "Outside work", in Education | no pictures there |
       | `cut-the-line/01.jpg`, `02.jpg`… | "On the podium", on the Cut the Line page (sorted by name) | no section |
       | `event-market-card.mp4` + `event-market-poster.jpg` | the Event-Market card on the home page | a small copy of its diagram |
       | `event-market-demo.mp4` + `event-market-poster.jpg` | under the header of the Event-Market page, looping | no video |
       | `internship-radar-card.mp4` + `internship-radar-card-poster.jpg` | the Internship Radar card on the home page | a small copy of its funnel |
       | `internship-radar-demo.mp4` + `internship-radar-poster.jpg` | under the header of the Internship Radar page, looping | no video |
 
-      Then describe each photo for people who can't see it: `:alt` in `*about-photo*`,
-      and the `:alts` list of the Cut the Line `:gallery` (one string per photo, same
+      Then describe each photo for people who can't see it: `:alt` in `*about-photo*`
+      (and in `*outside-media*`), and the `:alts` list of the Cut the Line `:gallery` (one string per photo, same
       order) in `content.lisp`. Delete the `private:` notes next to them.
 - [ ] **Confirm the Cut the Line text.** "My part" was written from the repo's commit
       history (a `private: Victor to confirm role wording` note sits above it). Reword
@@ -154,7 +155,7 @@ dashes, **no spaces** (a space in a web address becomes `%20` and breaks easily)
 ```sh
 # A photo (JPEG, HEIC, PNG): long edge 1600 px, JPEG quality 80, turned upright,
 # and every bit of metadata removed: GPS position, phone model, date.
-scripts/prepare-media.sh photo ~/Desktop/IMG_1234.HEIC about-running.jpg
+scripts/prepare-media.sh photo ~/Desktop/IMG_1234.HEIC portrait.jpg
 mkdir -p static/media/cut-the-line
 scripts/prepare-media.sh photo ~/Desktop/podium.jpg cut-the-line/01.jpg
 
@@ -209,6 +210,28 @@ text in every frame (Apple's Vision framework), then each frame was checked agai
 for names. If you ever redo them, check every frame for names before publishing. The
 posters are frames of the finished videos (`media.swift frame`, at 9.5 s and 3.2 s),
 so they are blurred too.
+
+**The race loop** (`outside-running-finish.mp4`, under "Outside work") is the last
+4 seconds of a 4K iPhone video from June 2024, cropped towards the finish line
+(1024×640, silent, about 1 MB). iPhones film in HDR ("HLG"), which looks washed out
+once turned into a normal video, so this one was made with ffmpeg
+(`brew install ffmpeg`), which can convert the colors:
+
+```sh
+ffmpeg -ss 6 -t 4 -i ~/Desktop/IMG_4937.MOV -map 0:v:0 -an \
+  -vf "colorspace=all=bt709:iall=bt2020:itrc=bt2020-10:format=yuv420p,crop=2592:1620:600:60,scale=1024:640,fps=30" \
+  -c:v libx264 -crf 27 -pix_fmt yuv420p -movflags +faststart -map_metadata -1 \
+  static/media/outside-running-finish.mp4
+ffmpeg -ss 3.8 -i static/media/outside-running-finish.mp4 -frames:v 1 -q:v 3 -map_metadata -1 \
+  static/media/outside-running-finish-poster.jpg
+```
+
+`-map_metadata -1` drops the date, phone and GPS; `crop=W:H:X:Y` keeps a W×H box
+whose top-left corner is at (X, Y).
+
+**The link-preview picture** (`static/og.png`, what LinkedIn or Slack show when the
+link is pasted) is made from `scripts/og.html` by `scripts/make-og.sh` (headless
+Chrome). If you change the headline, change it in `og.html` too and run the script.
 
 The build reads each video's width and height from the file, so the page reserves
 its space before the video loads. Delete a file and rebuild to remove it again.
