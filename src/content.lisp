@@ -45,18 +45,14 @@ the italic part gets its own <em> tag. Lisp data and HTML are the same thing her
   "Also used as the page's meta description, the snippet search engines show.")
 
 (defparameter *about*
-  '("At Canal+ I built internal AI applications that let leadership and editorial teams query company data and assemble content selections in natural language."
-    ;; private: DRAFT — Victor to review: written from CV facts only
-    "I like taking a project from end to end and getting it into people's hands. That started with Parsed, the AI news app I co-founded, where I built the personalization engine and a political-bias detector. Away from the keyboard I run middle distance: I've represented Luxembourg in the 1500m at the European Youth Olympic Festival.")
+  '("Hi, I'm Victor, and I like building things."
+    "I'm fascinated by AI and how fast it's moving. Every week the tools get a little better, and the world quietly rearranges itself around them. I don't just want to watch that happen: I want to help build it, one useful tool at a time."
+    "On this site you'll find what I've built, where I've worked, and what keeps me busy away from the keyboard. Enjoy!")
   "Each string becomes one paragraph.")
 
 (defparameter *about-photo*
-  ;; private: Victor must supply a portrait: head and shoulders, face clearly visible,
-  ;; private: plain background, ideally portrait-shaped (it is cropped to 4:5).
-  ;; private: Prepare it with: scripts/prepare-media.sh photo ~/Desktop/IMG_xxxx.HEIC portrait.jpg
-  ;; private: Don't use a race photo here: the first picture should say "engineer".
   '(:file "media/portrait.jpg"
-    :alt "Portrait of Victor Henz.")
+    :alt "Portrait of Victor Henz, smiling, in a dark blazer and white shirt.")
   "A portrait beside the About text. It only appears once the file exists in static/;
 until then the section is text only. :alt describes it for people who can't see it.")
 
@@ -64,9 +60,9 @@ until then the section is text only. :alt describes it for people who can't see 
   '(("GitHub"   "https://github.com/victorhenz241-eng")
     ("LinkedIn" "https://www.linkedin.com/in/victor-henz-158471267/")
     ("Email"    "mailto:victor.henz@essec.edu") ; mailto: makes the link open an email
-    ;; private: NIL on purpose: the CV PDF has your phone number on it, and everything in
-    ;; private: static/ is public. Export a copy without it, put that in static/, then write "cv.pdf".
-    ("CV"       nil))
+    ;; private: static/cv.pdf is the public copy, without the phone number. Everything in
+    ;; private: static/ is public, so never put the full version there.
+    ("CV"       "cv.pdf"))
   "(label url) pairs. Links with a NIL url are hidden.")
 
 (defparameter *repl*
@@ -92,7 +88,7 @@ animation stays short.")
      :org "Parsed"
      :place "Luxembourg"
      :dates "Jan 2025 · 6 months"
-     :summary "Co-founded and launched an AI news app on the App Store, personalized to each user's profession and location. Built the personalization engine and a political-bias detector. Grew it to 2,000+ users, with coverage in the Luxembourg press."))
+     :summary "Co-founded an AI news app with my brother Vivien and launched it on the App Store, personalized to each user's profession and location. Built the personalization engine and a political-bias detector, back when AI coding tools were still early. Grew it to 2,000+ users, with coverage in the Luxembourg press. The app is no longer live, but building it, launching it and trying to sell it taught me more about products than anything before."))
   "Newest first, one plist per role.")
 
 (defparameter *skills*
