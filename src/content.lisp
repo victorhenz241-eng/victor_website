@@ -121,7 +121,9 @@ animation stays short.")
      :stats (("1st" "of 120 participants, Secure Horizons 2026")
              ("€7,000" "prize")
              ("4" "people on the team"))
-     :card (:video "media/cut-the-line-card.mp4" :poster "media/cut-the-line-poster.jpg")
+     ;; The card's still (shown under reduced motion) is a frame of the loop
+     ;; itself, at 7.6 s: all four signals lit and the score at 89, "Danger".
+     :card (:video "media/cut-the-line-card.mp4" :poster "media/cut-the-line-card-poster.jpg")
      :stat ("1st" "of 120")
      ;; The demo we made, with sound. Plays only when you press play.
      :video (:file "media/cut-the-line-demo.mp4"
