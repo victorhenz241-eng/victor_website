@@ -113,6 +113,12 @@ home page (see LAYOUT). On the home page itself it is \"\", and an empty href wo
 reload the page, so we jump to the top of the page instead (<body id=\"top\">)."
   (if (equal home "") "#top" home))
 
+(defun site-link (url home)
+  "URL as written in *LINKS*, usable from any page. A full address (\"https://…\",
+\"mailto:…\") contains a colon and stays as it is. A file of this site (\"cv.pdf\")
+gets HOME in front, so it still works from the 404 page at a deep address."
+  (if (find #\: url) url (concatenate 'string home url)))
+
 (defun site-header (home &key toc rail-title)
   ;; HOME is the prefix that leads to the home page (see LAYOUT):
   ;;   ""         on the home page itself -> links like "#about" just scroll;
@@ -155,7 +161,7 @@ reload the page, so we jump to the top of the page instead (<body id=\"top\">)."
       (:ul :class "rail-only rail-links" :aria-label "Links"
        ,@(loop for (label url) in *links*
                when url
-                 collect `(:li (:a :href ,url ,label)))))))
+                 collect `(:li (:a :href ,(site-link url home) ,label)))))))
 
 (defun page-sections (tree)
   "Every (id heading) pair of the numbered sections in TREE, in page order.
@@ -249,7 +255,7 @@ as in SITE-HEADER, so the links work from the home page, a project page and the 
    (loop for (label url) in *links*
          when url
            collect `(:group "Links" :label ,label
-                     :href ,url :hint ,(link-hint url)))
+                     :href ,(site-link url home) :hint ,(link-hint url)))
    ;; An action instead of a link: no :href, and command-menu.js runs it.
    ;; Only pages that have a source view get it. The 404 is the one page whose
    ;; HOME is the base path (see LAYOUT), and it has nothing to show.
