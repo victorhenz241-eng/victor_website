@@ -771,8 +771,9 @@ button simply says "Play". How to record and compress the video: see README.
 that plays while the card is on screen, or a photo. A project with no picture yet
 doesn't get a fake one; its card draws something true from its own data instead (a
 big "1st / 120", a small copy of its diagram or funnel, or the number of lines of Lisp,
-counted during the build). The About section gets a photo beside the text the moment
-`static/media/about-running.jpg` exists.
+counted during the build). The About section gets a portrait beside the text the
+moment `static/media/portrait.jpg` exists; the running photo and race loop live
+lower down, under "Outside work" (`outside-work` in `pages.lisp`).
 
 ### Step 1: true by construction
 
@@ -837,6 +838,26 @@ removes the photos' metadata. Plain `sips` keeps a phone photo's GPS position, s
 the script uses a small Swift helper (Swift comes with macOS) and then checks the
 result with `sips -g all`.
 
+### Skills and Outside work: four small new tricks
+
+- **A definition list.** `skills` in `pages.lisp` writes `<dl>`: each group's name
+  is a `<dt>` (term) and its pills are the `<dd>` (description). It's the HTML for
+  "name: value" pairs, so a screen reader reads "AI & data" together with its skills.
+  [MDN: `<dl>`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/dl)
+- **Two pictures, one height.** Under "Outside work", the loop's frame sets the row's
+  height with `aspect-ratio: 16 / 10`. The photo next to it is a tall portrait that
+  would make the row taller, so it gets `height: 0` (it asks for no height at all)
+  and `min-height: 100%` (then stretches to the row the loop made). `object-fit:
+  cover` crops it to fit, as in Step 5.
+- **A video that isn't decoration.** A card's loop is `aria-hidden`: the card's
+  title already says what it is. The race loop *is* the content, so `loop-video`
+  takes an `:alt` and writes `role="img"` plus `aria-label`: "read this like a
+  picture, with this description".
+- **Attribute selectors.** With six nav links the top bar overflowed on small
+  tablets. `a[href$="#about"]` picks the link whose `href` *ends with* `#about`, so
+  the CSS can hide that one link under 52rem without a new class.
+  [MDN: attribute selectors](https://developer.mozilla.org/en-US/docs/Web/CSS/Attribute_selectors)
+
 ---
 
 ## The rule that applies to every effect: reduced motion
@@ -885,7 +906,12 @@ lighter color on top.
   the 404 too).
 - **Open Graph** (`og:title`, `og:description`, `og:type`, `og:site_name`) and
   `twitter:card`: what LinkedIn, Slack or iMessage show when someone pastes a link.
-  There's no `og:image` on purpose: a plain text card is better than an invented picture.
+  `og:image` is `static/og.png`, a plain 1200×630 card with the name and the
+  headline (no photo, no fake screenshot). It's made from `scripts/og.html` by
+  `scripts/make-og.sh`, which takes a screenshot with Chrome running "headless"
+  (without a window). Apps need the picture's *full* address, so `absolute-url`
+  builds it from `*domain*`, or from `*pages-origin*` + `*base-path*` until then.
+  `twitter:card` is `summary_large_image`: show that picture wide.
 - `canonical` and `og:url`: the page's one true address. Only written once
   `*domain*` is set (`page-url`), because without a domain the final address isn't
   certain, and a wrong one is worse than none.

@@ -1,0 +1,71 @@
+<!doctype html>
+<!--
+  og.html — the template for static/og.png, the picture apps show when someone
+  shares a link to the site (LinkedIn, Slack, iMessage...). It's an "Open Graph
+  image": 1200 x 630 pixels, the size those apps expect.
+
+  scripts/make-og.sh opens this page in Chrome without a window ("headless") and
+  saves a screenshot of it. To change the picture, edit this file, then run
+  scripts/make-og.sh and rebuild the site.
+
+  Keep it honest: the same words as the top of the home page, in the site's own
+  fonts and light-theme colors. If you change *headline* or *eyebrow* in
+  src/content.lisp, change the text below too.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Victor Henz (Open Graph image)</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400&family=Literata:ital,wght@0,400;1,400&display=block">
+<style>
+  /* The same colors as static/style.css, light theme. */
+  :root { --bg: #fafafb; --text: #0e1114; --muted: #5f646b; --line: #e4e5e8; }
+  html, body { margin: 0; }
+  body {
+    width: 1200px;
+    height: 630px;
+    box-sizing: border-box;
+    padding: 72px 88px 64px;
+    display: flex;               /* a column: name on top, headline at the bottom */
+    flex-direction: column;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Literata", Georgia, serif;
+  }
+  .name { margin: 0; font-size: 40px; letter-spacing: -0.02em; }
+  .eyebrow {
+    margin: auto 0 28px;         /* margin-top: auto pushes everything below it down */
+    font-family: "Geist Mono", ui-monospace, monospace;
+    font-size: 22px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  h1 {
+    margin: 0;
+    max-width: 14ch;
+    font-size: 84px;
+    font-weight: 400;
+    line-height: 1.05;
+    letter-spacing: -0.025em;
+  }
+  h1 em { color: var(--muted); }
+  .foot {
+    display: flex;
+    justify-content: space-between;
+    margin: 48px 0 0;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+    font-family: "Geist Mono", ui-monospace, monospace;
+    font-size: 20px;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+  <p class="name">Victor Henz</p>
+  <p class="eyebrow">AI engineering · CentraleSupélec × ESSEC</p>
+  <h1>I build AI tools on top of <em>real data</em>.</h1>
+  <p class="foot"><span>Built with Common Lisp</span><span>(λ)</span></p>
+</body>
+</html>

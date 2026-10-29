@@ -27,6 +27,11 @@ and pointed it at GitHub Pages — the build then writes the CNAME file for you.
 the repo's name (github.io/victor_website/); with a domain it sits at the root.
 Only the 404 page uses this: normal pages keep relative links, which work anywhere.")
 
+(defparameter *pages-origin* "https://victorhenz241-eng.github.io"
+  "The GitHub Pages address of your account. Until *domain* is set, the site lives
+at this address followed by *base-path*. Only the link-preview picture uses it:
+apps like LinkedIn need that picture's full address, a relative one won't do.")
+
 (defparameter *eyebrow* "AI engineering · CentraleSupélec × ESSEC"
   "The small monospace line above the big headline.")
 
@@ -46,10 +51,13 @@ the italic part gets its own <em> tag. Lisp data and HTML are the same thing her
   "Each string becomes one paragraph.")
 
 (defparameter *about-photo*
-  ;; private: add the race name to the alt text if you want (photo from June 2024)
-  '(:file "media/about-running.jpg"
-    :alt "Victor racing on a blue track in the red and light-blue Luxembourg national team kit.")
-  "A photo beside the About text. It only appears once the file exists in static/;
+  ;; private: Victor must supply a portrait: head and shoulders, face clearly visible,
+  ;; private: plain background, ideally portrait-shaped (it is cropped to 4:5).
+  ;; private: Prepare it with: scripts/prepare-media.sh photo ~/Desktop/IMG_xxxx.HEIC portrait.jpg
+  ;; private: Don't use a race photo here: the first picture should say "engineer".
+  '(:file "media/portrait.jpg"
+    :alt "Portrait of Victor Henz.")
+  "A portrait beside the About text. It only appears once the file exists in static/;
 until then the section is text only. :alt describes it for people who can't see it.")
 
 (defparameter *links*
@@ -87,6 +95,26 @@ animation stays short.")
      :summary "Co-founded and launched an AI news app on the App Store, personalized to each user's profession and location. Built the personalization engine and a political-bias detector. Grew it to 2,000+ users, with coverage in the Luxembourg press."))
   "Newest first, one plist per role.")
 
+(defparameter *skills*
+  ;; Each list is (group skill skill ...). The first two groups' skills come from
+  ;; the CV; Claude, Neo4j, React, Supabase, n8n and Common Lisp come from the
+  ;; projects on this site, where they were part of what I built myself.
+  '(("AI & data"
+     "LLM agents" "LLM evaluation" "Text-to-SQL" "Semantic modeling"
+     "Snowflake Cortex Analyst" "Snowflake Cortex Agents" "Claude on Amazon Bedrock")
+    ("Languages & frameworks"
+     "Python" "SQL" "TypeScript" "Next.js" "FastAPI" "React" "Common Lisp")
+    ("Infrastructure & tools"
+     "Docker" "Neo4j" "Google Cloud Run" "Vercel" "Supabase" "n8n" "Git"))
+  "The toolbox, grouped so a reader can scan it in a few seconds.")
+
+(defparameter *languages*
+  '(("French" "mother tongue")
+    ("English" "bilingual")
+    ("German" "proficient")
+    ("Luxembourgish" "proficient"))
+  "(language level) pairs, in the CV's words.")
+
 (defparameter *education*
   '((:role "Exchange semester"
      :org "George Washington University"
@@ -98,6 +126,32 @@ animation stays short.")
      :place "France"
      :dates "2024 – 2028"
      :summary "GPA 4.0 / 4.0. Machine learning, computer vision, stochastic processes, algorithms, big data systems.")))
+
+(defparameter *outside-work*
+  '((:what "Track and field"
+     :dates "2021 – present"
+     :text "Represented Luxembourg in the 1500m at the European Youth Olympic Festival. National U18 champion in cross country and the 800m; runner-up at the senior indoor 800m nationals.")
+    (:what "Football"
+     :dates "2010 – 2024"
+     :text "Over a decade at a high level with Racing FC Union Luxembourg. MVP at NECIS Varsity in Amsterdam (2023).")
+    (:what "Class representative, AIDAMS"
+     :dates "2024 – present"
+     :text "Led a formal petition to the administration on how the GPA is computed.")
+    (:what "Founder, ELA Charity Week"
+     :dates "2023"
+     :text "Launched my school's first charity week, which raised €1,200+ for the ELA."))
+  "Sport and leadership, shown small under Education: a human detail, not a headline.")
+
+(defparameter *outside-media*
+  ;; A photo and a 4-second silent loop from the same day on the track. Like every
+  ;; picture on the site, each one shows only once its file exists in static/.
+  '(:photo (:file "media/outside-running.jpg"
+            :alt "Victor on a blue running track in the red and light-blue Luxembourg team kit, bib number 82.")
+    :video (:file "media/outside-running-finish.mp4"
+            :poster "media/outside-running-finish-poster.jpg"
+            :alt "Filmed from the stands: runners in the light-blue Luxembourg kit come down the home straight, and Victor, bib 82, crosses the finish line.")
+    :caption "On the track, June 2024.")
+  "The pictures beside the Outside work list. :alt describes each one.")
 
 (defparameter *projects-intro* "Here are some of my projects."
   "The line under the Projects label. The cards are a selection, not everything.")
@@ -121,7 +175,9 @@ animation stays short.")
      :stats (("1st" "of 120 participants, Secure Horizons 2026")
              ("€7,000" "prize")
              ("4" "people on the team"))
-     :card (:video "media/cut-the-line-card.mp4" :poster "media/cut-the-line-poster.jpg")
+     ;; The card's still (shown under reduced motion) is a frame of the loop
+     ;; itself, at 7.6 s: all four signals lit and the score at 89, "Danger".
+     :card (:video "media/cut-the-line-card.mp4" :poster "media/cut-the-line-card-poster.jpg")
      :stat ("1st" "of 120")
      ;; The demo we made, with sound. Plays only when you press play.
      :video (:file "media/cut-the-line-demo.mp4"

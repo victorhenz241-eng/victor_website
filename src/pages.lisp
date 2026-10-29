@@ -77,12 +77,31 @@ isn't certain, and a wrong address in the head is worse than none."
   (when *domain*
     (format nil "https://~a/~a" *domain* (if (equal path "index.html") "" path))))
 
+(defun absolute-url (file)
+  "The full address of FILE (relative to the site's root) once published, e.g.
+\"https://victorhenz241-eng.github.io/victor_website/og.png\". With *DOMAIN* set,
+the site sits at the root of that domain; without it, at *PAGES-ORIGIN* followed
+by *BASE-PATH*. Unlike PAGE-URL, this always returns an address: a link preview
+needs one, and if it's wrong the only harm is a missing picture."
+  (if *domain*
+      (format nil "https://~a/~a" *domain* file)
+      (format nil "~a~a~a" *pages-origin* *base-path* file)))
+
+(defparameter *og-image*
+  '(:file "og.png" :width 1200 :height 630
+    :alt "Victor Henz. AI engineering, CentraleSupélec × ESSEC. I build AI tools on top of real data.")
+  "The link-preview picture (static/og.png, made by scripts/make-og.sh), its size
+in pixels, and its description for people who can't see it.")
+
 (defparameter *home-sections*
   '(("about" "About")
     ("work" "Work" "experience")   ; an optional 3rd item: extra search words
     ("projects" "Projects")
-    ("education" "Education")
+    ("skills" "Skills" "toolbox stack languages")
+    ("education" "Education" "outside work sport leadership")
     ;; Keep Contact last: on phones the CSS hides every nav link but the last one.
+    ;; And keep the list short (six at most): every link is one more thing to read.
+    ;; "Outside work" has no link on purpose: it's a side note inside Education.
     ("contact" "Contact"))
   "(id label [search-words]) for each section of the home page. Two things are built from this
 one list: the links in the header and the \"Pages\" group of the command menu.
@@ -323,15 +342,21 @@ TOC and RAIL-TITLE are for the side rail (see SITE-HEADER and DEFPAGE)."
            `(:meta :name "description" :content ,description))
         ;; How a link to the page looks when it's shared (LinkedIn, Slack,
         ;; iMessage...): Open Graph tags, which most apps read, and a card type
-        ;; for X. There's no og:image on purpose: the apps then show a plain
-        ;; text card, which is better than an invented picture.
+        ;; for X. og:image is a plain card with the name and the headline
+        ;; (static/og.png, see scripts/make-og.sh), the same on every page.
+        ;; "summary_large_image" asks X to show it wide, above the title.
         (:meta :property "og:type" :content "website")
         (:meta :property "og:site_name" :content ,*name*)
         (:meta :property "og:title" :content ,title)
         ,(when description
            `(:meta :property "og:description" :content ,description))
         ,(when url `(:meta :property "og:url" :content ,url))
-        (:meta :name "twitter:card" :content "summary")
+        ,@(destructuring-bind (&key file width height alt) *og-image*
+            `((:meta :property "og:image" :content ,(absolute-url file))
+              (:meta :property "og:image:width" :content ,width)
+              (:meta :property "og:image:height" :content ,height)
+              (:meta :property "og:image:alt" :content ,alt)))
+        (:meta :name "twitter:card" :content "summary_large_image")
         ;; canonical = "this is the page's one true address", for search engines.
         ,(when url `(:link :rel "canonical" :href ,url))
         ,(when noindex '(:meta :name "robots" :content "noindex"))
@@ -984,9 +1009,9 @@ then one numbered section per part. PARTS is a list of (heading panel content)."
             collect (section-with-source (format nil "part-~d" n) n heading panel content))))
 
 (defun about ()
-  "The About text, with the photo beside it once static/media/about-running.jpg
-exists (*ABOUT-PHOTO* in content.lisp). Without the photo it's the text alone,
-exactly as before: no empty box waiting for a picture."
+  "The About text, with the portrait beside it once static/media/portrait.jpg
+exists (*ABOUT-PHOTO* in content.lisp). Without the photo it's the text alone:
+no empty box waiting for a picture."
   (let ((text `(:div :class "prose" :data-reveal t
                  ,@(mapcar (lambda (paragraph) `(:p ,paragraph)) *about*)))
         (photo (destructuring-bind (&key file alt) *about-photo*
@@ -996,6 +1021,56 @@ exactly as before: no empty box waiting for a picture."
            ,text
            (:figure :class "about-figure" :data-reveal t :style ,(stagger 1) ,photo))
         text)))
+
+(defun skills ()
+  "The toolbox as a definition list (<dl>): each group's name is a term (<dt>), and
+its skills are the description (<dd>), a row of small pills. A <dl> is the HTML for
+\"name: value\" pairs, so a screen reader announces the group with its skills.
+The spoken languages come last, as one more group: \"French, mother tongue\"."
+  `(:dl :class "skills" :data-reveal t
+     ,@(loop for (group . items) in *skills*
+             collect `(:div :class "skills-row"
+                        (:dt ,group)
+                        (:dd (:ul :class "tags skill-tags"
+                              ,@(mapcar (lambda (item) `(:li ,item)) items)))))
+     (:div :class "skills-row"
+      (:dt "Languages")
+      (:dd (:ul :class "tags skill-tags"
+            ,@(loop for (language level) in *languages*
+                    ;; The comma is for screen readers; the CSS hides it.
+                    collect `(:li ,language (:span :class "skill-level"
+                                              (:span :class "sr-only" ",") " " ,level))))))))
+
+(defun outside-work ()
+  "The \"Outside work\" block at the end of the Education section: sport and
+leadership, set smaller than the main content so it reads as a side note. The
+photo and the loop sit under the list, and each one shows only if its file exists
+(PICTURE and LOOP-VIDEO return NIL otherwise). No pictures, no figure at all."
+  (destructuring-bind (&key photo video caption) *outside-media*
+    (let ((photo (destructuring-bind (&key file alt) photo
+                   (picture file alt :class "outside-photo")))
+          (video (destructuring-bind (&key file poster alt) video
+                   (loop-video file poster :class "outside-video" :alt alt))))
+      `(:div :class "outside"
+         (:h3 :class "sublabel" :data-reveal t "Outside work")
+         (:ul :class "outside-list"
+          ,@(loop for (i item) in (numbered *outside-work*)
+                  collect (destructuring-bind (&key what dates text) item
+                            `(:li :data-reveal t :style ,(stagger i)
+                               (:p :class "outside-head"
+                                (:strong ,what) " " (:span :class "dates" ,dates))
+                               (:p ,text)))))
+         ,(when (or photo video)
+            `(:figure :class "outside-media" :data-reveal t
+               ,@(when photo (list photo))
+               ;; The loop and its Pause button share a wrapper: motion.js looks
+               ;; for the button next to the video (see section 7 of motion.js).
+               ,@(when video
+                   `((:div :class "outside-video-frame"
+                       ,video
+                       (:button :type "button" :class "diagram-toggle media-toggle"
+                                :data-loop-toggle t :hidden t :aria-label "Pause video" "Pause"))))
+               (:figcaption :class "diagram-caption" (:span ,caption))))))))
 
 ;;; ------------------------------------------------------------------
 ;;; Pages
@@ -1012,9 +1087,14 @@ exactly as before: no empty box waiting for a picture."
            `(:ul :class "cards"
               ,@(loop for (i project) in (numbered *projects*)
                       collect (project-card i project))))
-  (section "education" 4 "Education"
-           (timeline *education*))
-  (section "contact" 5 "Contact"
+  (section "skills" 4 "Skills"
+           `(:p :class "section-intro" :data-reveal t
+                "What I've worked with at Canal+, at hackathons and in the projects above.")
+           (skills))
+  (section "education" 5 "Education"
+           (timeline *education*)
+           (outside-work))
+  (section "contact" 6 "Contact"
            `(:div :class "contact" :data-reveal t
               (:p :class "contact-line" ,*contact-line*)
               ,(link-list))))

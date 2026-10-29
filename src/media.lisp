@@ -1,6 +1,6 @@
 ;;;; media.lisp — photos and videos, only when the file really exists.
 ;;;;
-;;;; content.lisp names media files ("media/about-running.jpg"). Before the build
+;;;; content.lisp names media files ("media/portrait.jpg"). Before the build
 ;;;; writes an <img> or a <video>, it checks the file is in static/ (PROBE-FILE).
 ;;;; No file, no tag: the page never shows a broken image, and it never shows a
 ;;;; grey placeholder pretending to be a picture. So the site is "true by
@@ -146,20 +146,23 @@ purpose: a picture with no description is a bug."
 (defun poster-or-nil (poster)
   (when (static-file-p poster) poster))
 
-(defun loop-video (file poster &key (class "card-video"))
+(defun loop-video (file poster &key (class "card-video") alt)
   "A short silent loop (a project card), or NIL when FILE isn't there.
 muted + playsinline: phones only let a video play by itself when it is silent and
 plays inside the page (not full screen). There is no `autoplay` attribute:
 motion.js plays it while it's on screen, and only when the visitor hasn't asked
-for less motion. Otherwise it simply shows its POSTER (or its first frame)."
+for less motion. Otherwise it simply shows its POSTER (or its first frame).
+ALT, when given, describes the video for screen readers (role=\"img\" + aria-label:
+\"read it like a picture\"). Without ALT the video is decoration and is hidden
+from them, like on a project card, whose title and text already say everything."
   (when (static-file-p file)
     (destructuring-bind (width height) (video-size file)
       `(:video :class ,class :data-loop-video t
                :width ,width :height ,height
                :poster ,(poster-or-nil poster)
                :muted t :loop t :playsinline t :preload "metadata"
-               ;; Decorative: the card's title and text say what the project is.
-               :aria-hidden "true" :tabindex "-1"
+               :role ,(when alt "img") :aria-label ,alt
+               :aria-hidden ,(unless alt "true") :tabindex "-1"
          (:source :src ,file :type "video/mp4")))))
 
 (defun sound-video (file poster title)
