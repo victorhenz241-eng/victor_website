@@ -62,8 +62,16 @@ function setupSourceView() {
   // sits on screen, and after the swap we scroll so it's back in the same place.
   // (If its top was hidden under the header, we bring its top into view: you see
   // the heading of the code you asked for.)
+  // On wide screens the header is the side rail (style.css, section 14): a column
+  // as tall as the screen that covers nothing, so then the reading area starts at 0.
+  // "Taller than half the screen" tells the rail apart from the top bar.
+  function coveredTop() {
+    if (!header) return 0;
+    const box = header.getBoundingClientRect();
+    return box.height > window.innerHeight / 2 ? 0 : box.bottom;
+  }
   function measure() {
-    const top = header ? header.getBoundingClientRect().bottom : 0;
+    const top = coveredTop();
     const view = views.find((v) => v.host.getBoundingClientRect().bottom > top + 1);
     return view && { host: view.host, y: Math.max(view.host.getBoundingClientRect().top, top) };
   }
