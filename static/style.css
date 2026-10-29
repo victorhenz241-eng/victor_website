@@ -10,6 +10,7 @@
  *   6. Sections & timeline  7. Cards  8. Contact & footer  9. MOTION
  *   10. Command menu (⌘K)   11. Source view ((λ) source)
  *   12. Diagrams & the demo video   13. Media: funnel, About photo, galleries
+ *   14. Wide screens: the side rail
  */
 
 /* ---------- 1. Tokens ---------- */
@@ -172,6 +173,18 @@ kbd {
 }
 
 .header-end { display: flex; align-items: center; gap: var(--s3); }
+
+/* The two buttons share a wrapper so the side rail (section 14) can put them on
+   their own row. Here, in the top bar, display: contents makes the wrapper
+   "disappear" from the layout: its children behave as if they sat directly in
+   .header-end, so the bar looks exactly as it did before the wrapper existed. */
+.header-tools { display: contents; }
+
+/* Parts of the header that only the side rail shows (see SITE-HEADER in pages.lisp).
+   display: none also hides them from screen readers, so nothing is read twice.
+   ".site-header .rail-only" (two classes) outweighs ".site-header nav" (a class
+   and a tag), so the table-of-contents nav stays hidden too. */
+.site-header .rail-only { display: none; }
 
 .site-header nav { display: flex; gap: var(--s3); }
 .site-header nav a {
@@ -1200,6 +1213,184 @@ kbd {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
+}
+
+/* ---------- 14. Wide screens: the side rail ----------
+ *
+ * From 64rem (1024px) wide, the same header becomes a column on the left that
+ * stays in place while the content scrolls on the right. Same HTML, second
+ * layout: everything below is inside one media query, so under 64rem none of
+ * it exists and the top bar works exactly as in section 3.
+ *
+ * The page becomes a CSS grid with two columns: the rail, then the content.
+ *   grid-template-columns: <rail> <content>
+ * minmax(0, 1fr) lets the content column take the rest of the space but also
+ * shrink below the width of a long word or a wide picture (a plain 1fr won't).
+ */
+
+@media (min-width: 64rem) {
+  /* The rail covers nothing at the top, so a #section link only needs a little air. */
+  html { scroll-padding-top: var(--s4); }
+
+  body {
+    --rail: clamp(14rem, 22vw, 19rem);
+    display: grid;
+    grid-template-columns: var(--rail) minmax(0, 1fr);
+    grid-template-rows: auto 1fr;    /* main, then the footer at the bottom */
+    column-gap: clamp(var(--s6), 6vw, 7rem);
+    max-width: 90rem;
+    margin: 0 auto;
+    padding: 0 clamp(var(--s4), 4vw, var(--s8));
+  }
+
+  /* Each part goes to its cell. The header spans both rows, so its sticky
+     column can travel the whole height of the page. */
+  .site-header { grid-column: 1; grid-row: 1 / span 2; }
+  main { grid-column: 2; grid-row: 1; }
+  .footer { grid-column: 2; grid-row: 2; }
+
+  /* The content column is already as wide as it should be: no extra limit or gutter. */
+  main.page, .footer.page { max-width: 58rem; margin: 0; padding-left: 0; padding-right: 0; }
+
+  /* --- The rail itself ---
+     position: sticky + top: 0 + the height of the screen: it scrolls with the
+     page until its top reaches the top of the screen, then stays there.
+     align-self: start stops the grid from stretching it to the page's height
+     (a box as tall as the page would have nowhere to stick). dvh = the height
+     of the screen actually visible, without the phone browser bars. */
+  .site-header {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    height: 100vh;
+    height: 100dvh;
+    overflow-y: auto;                /* a very short window can still reach the links */
+    background: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-bottom: 0;
+  }
+  /* Shrinking on scroll is for the top bar only. */
+  .site-header.is-scrolled,
+  .site-header.is-scrolled .header-inner,
+  .site-header.is-scrolled .wordmark { transform: none; }
+
+  .header-inner {
+    height: 100%;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+    gap: 0;
+    padding: var(--s12) 0 var(--s6);  /* the name lines up with the top of the headline */
+    max-width: none;
+  }
+
+  .site-header .rail-only { display: block; }
+
+  .wordmark {
+    font-size: clamp(1.75rem, 2.4vw, 2.25rem);
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    white-space: normal;
+  }
+
+  .rail-role {
+    margin: var(--s2) 0 0;
+    max-width: 16rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    line-height: 1.6;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-wrap: balance;              /* two lines of about the same length, not one long + one word */
+  }
+
+  /* On a project page: the way back, then the project's name. */
+  .rail-context { margin-top: var(--s4); }
+  .rail-context .back {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .rail-title {
+    margin: var(--s1) 0 0;
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    line-height: 1.25;
+  }
+
+  .header-end {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--s4);
+    margin-top: var(--s8);
+  }
+
+  /* The nav, as a vertical list. A project page shows its own table of contents
+     (.toc) instead of the home page's sections. */
+  .site-header nav { flex-direction: column; gap: 0; }
+  .site-header nav.has-toc { display: none; }
+  .site-header nav a {
+    display: flex;
+    align-items: center;
+    gap: var(--s2);
+    padding: 0.4375rem 0;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  /* The case study's parts have real titles, not one-word labels: sentence
+     case and the body font read better for them. */
+  .site-header .toc a {
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    letter-spacing: 0;
+    text-transform: none;
+    line-height: 1.35;
+  }
+
+  /* The active-section mark, turned on its side: instead of a line growing under
+     the link (section 3), a short line in front of it grows longer and the label
+     goes from gray to ink. It's the same aria-current="true" that motion.js sets.
+     The line animates its width, so the label slides right as it grows. */
+  .site-header nav a::after { display: none; }
+  .site-header nav a::before {
+    content: "";
+    flex-shrink: 0;
+    width: 1rem;
+    height: 1px;
+    background: var(--faint);
+    transition: width 0.4s var(--ease), background-color 0.2s;
+  }
+  .site-header nav a:hover::before { width: 2rem; background: var(--text); }
+  .site-header nav a[aria-current="true"]::before { width: 3rem; background: var(--text); }
+
+  /* The buttons, side by side on their own row. */
+  .header-tools { display: flex; flex-wrap: wrap; gap: var(--s1); }
+
+  /* The links sit at the bottom of the column: margin-top: auto takes all the
+     free space above them in the flex column. */
+  .site-header .rail-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s1) var(--s3);
+    margin: auto 0 0;
+    padding: var(--s6) 0 0;
+    list-style: none;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+  }
+  .rail-links a { color: var(--muted); text-decoration: none; transition: color 0.2s; }
+  .rail-links a:hover { color: var(--text); text-decoration: underline; }
+
+  /* What the rail now says, the content doesn't need to repeat: the line above
+     the home page's headline, and the "← All work" link of a project page. */
+  .hero:not(.case-hero) > .view-rendered > .eyebrow,
+  .case-hero .eyebrow { display: none; }
 }
 
 /* People who ask their OS for less motion get none. Always include this. */

@@ -13,12 +13,14 @@
 (defvar *pages* (make-hash-table :test #'equal)
   "Maps an output file name (\"index.html\") to a function that returns its HTML tree.")
 
-(defmacro defpage (path (&key title description base home-page noindex) &body body)
+(defmacro defpage (path (&key title description base home-page noindex toc rail-title) &body body)
   "Define a page written to PATH. Each BODY form is evaluated (at build time) and must
 return an HTML tree, so quote literal HTML: '(:p \"hi\") or `(:p ,*name*).
 BASE is only for pages that need absolute links (the 404 page); see LAYOUT.
 HOME-PAGE is T only for index.html, so its section links can stay on the page.
 NOINDEX asks search engines to leave the page out of their results (the 404).
+TOC is T on pages whose side rail lists the page's own sections (the case studies),
+and RAIL-TITLE is the name shown above that list.
 
 Try (macroexpand-1 '(defpage \"x.html\" (:title \"X\") '(:p \"hi\"))) in the REPL
 to see what this macro actually writes for you."
@@ -35,6 +37,8 @@ to see what this macro actually writes for you."
                        :base ,base
                        :home-page ,home-page
                        :noindex ,noindex
+                       :toc ,toc
+                       :rail-title ,rail-title
                        :body (list ,@body)))))))
 
 ;;; ------------------------------------------------------------------
@@ -90,21 +94,68 @@ home page (see LAYOUT). On the home page itself it is \"\", and an empty href wo
 reload the page, so we jump to the top of the page instead (<body id=\"top\">)."
   (if (equal home "") "#top" home))
 
-(defun site-header (home)
+(defun site-header (home &key toc rail-title)
   ;; HOME is the prefix that leads to the home page (see LAYOUT):
   ;;   ""         on the home page itself -> links like "#about" just scroll;
   ;;   "./"       on a project page       -> "./#about" goes back home first;
   ;;   a base path on the 404 page         -> "/victor_website/#about".
+  ;;
+  ;; One header, two layouts (style.css, sections 3 and 14):
+  ;;   - narrower than 64rem: a bar across the top (name, links, buttons);
+  ;;   - 64rem and wider: a column on the left that stays put while the
+  ;;     content scrolls on the right (the "side rail").
+  ;; The parts marked "rail only" below are hidden in the top bar by the CSS.
+  ;; display:none hides them from screen readers too, so nobody hears them twice.
+  ;; TOC is a list of (id heading) pairs, the sections of this page (see
+  ;; PAGE-SECTIONS); RAIL-TITLE is the project's name on a case-study page.
   `(:header :class "site-header"
      (:div :class "page header-inner"
       (:a :class "wordmark" :href ,(home-link home) ,*name*)
+      ;; Rail only: one line about Victor, or, on a project page, the way back
+      ;; and the project's name.
+      ,(if rail-title
+           `(:div :class "rail-only rail-context"
+              (:a :class "back" :href ,(format nil "~a#projects" home)
+                  (:span :aria-hidden "true" "← ") "All work")
+              (:p :class "rail-title" ,rail-title))
+           `(:p :class "rail-only rail-role" ,*eyebrow*))
       (:div :class "header-end"
-       ;; aria-label names this nav for screen readers, which list every landmark.
-       (:nav :aria-label "Sections"
+       ;; aria-label names each nav for screen readers, which list every landmark.
+       ;; With a TOC, the rail shows it instead of the home page's sections.
+       (:nav :aria-label "Sections" :class ,(when toc "has-toc")
         ,@(loop for (id label) in *home-sections*
                 collect `(:a :href ,(format nil "~a#~a" home id) ,label)))
-       ,(source-toggle)
-       ,(command-button)))))
+       ,(when toc
+          `(:nav :aria-label "On this page" :class "rail-only toc"
+             ,@(loop for (id heading) in toc
+                     collect `(:a :href ,(format nil "#~a" id) ,heading))))
+       (:div :class "header-tools"
+        ,(source-toggle)
+        ,(command-button)))
+      ;; Rail only: the links, at the bottom of the column.
+      (:ul :class "rail-only rail-links" :aria-label "Links"
+       ,@(loop for (label url) in *links*
+               when url
+                 collect `(:li (:a :href ,url ,label)))))))
+
+(defun page-sections (tree)
+  "Every (id heading) pair of the numbered sections in TREE, in page order.
+TREE is a page's HTML tree, before it is rendered: plain lists. So the side rail's
+table of contents is read from the page itself, and a new part in content.lisp
+shows up in it with no extra work.
+A section looks like (:section :id \"part-1\" ... (:h2 ... \"How it works\") ...),
+see SECTION-WITH-SOURCE: its heading is the last thing in its <h2>.
+This is a recursive function: for a list that isn't a section, it asks the same
+question of every element and joins the answers (LOOP ... APPEND)."
+  (cond ((atom tree) nil)                       ; a string or a number: no sections
+        ((eq (first tree) :section)
+         ;; SPLIT-ATTRIBUTES (html.lisp) separates :id \"x\" :class \"y\" from the children.
+         (multiple-value-bind (attributes children) (split-attributes (rest tree))
+           (let ((h2 (find-if (lambda (child) (and (consp child) (eq (first child) :h2)))
+                              children)))
+             (when (and h2 (getf attributes :id))
+               (list (list (getf attributes :id) (car (last h2))))))))
+        (t (loop for child in tree append (page-sections child)))))
 
 (defun source-toggle ()
   "The \"(λ) source\" switch (see source.lisp). A <button> with aria-pressed is
@@ -238,11 +289,12 @@ a text box that controls a list box of options, grouped under small mono labels.
          (:span (:kbd "↵") " open")
          (:span (:kbd "esc") " close"))))))
 
-(defun layout (&key title description path base home-page noindex body)
+(defun layout (&key title description path base home-page noindex toc rail-title body)
   "The HTML shared by every page. BASE is NIL for normal pages, which keeps every
 link relative (\"style.css\"), so the site works at any address. Given a BASE like
 \"/victor_website/\", links become absolute (\"/victor_website/style.css\").
-HOME-PAGE is T on index.html only (see HOME below). PATH is the page's file name."
+HOME-PAGE is T on index.html only (see HOME below). PATH is the page's file name.
+TOC and RAIL-TITLE are for the side rail (see SITE-HEADER and DEFPAGE)."
   ;; HOME is what we put in front of "#about" to reach the home page's sections.
   ;; On the home page: nothing. A link to "./#about" would work at /, but at
   ;; /index.html it points to a *different* address (/), so the browser reloads.
@@ -295,7 +347,7 @@ HOME-PAGE is T on index.html only (see HOME below). PATH is the page's file name
         ;; The first thing Tab reaches: keyboard users can jump past the header
         ;; straight to the content. Off screen until it has the focus (style.css).
         (:a :class "skip-link" :href "#main" "Skip to content")
-        ,(site-header home)
+        ,(site-header home :toc (when toc (page-sections body)) :rail-title rail-title)
         (:main :id "main" :class "page" ,@body)
         (:footer :class "page footer"
          (:span "© " ,*name*)
@@ -965,7 +1017,9 @@ exactly as before: no empty box waiting for a picture."
         (let ((slug (getf project :slug)))
           (when slug
             (defpage (case-study-path slug) (:title (format nil "~a · ~a" (getf project :name) *name*)
-                                             :description (getf project :summary))
+                                             :description (getf project :summary)
+                                             :toc t
+                                             :rail-title (getf project :name))
               (case-study project)))))
       *projects*)
 
