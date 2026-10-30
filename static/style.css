@@ -69,8 +69,36 @@
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
+/* Dark theme. The theme switch in the header (static/theme.js) has three
+   settings, written on <html> as a data-theme attribute:
+     no data-theme         "auto": follow the system (prefers-color-scheme);
+     data-theme="light"    always light: the values above, nothing to change;
+     data-theme="dark"     always dark: the values below.
+   So the dark values apply in two cases: an explicit dark choice, or "auto" on a
+   system set to dark. A selector list can't hold a media query, so the two cases
+   need two rules with the same values. Change one, change the other.
+   color-scheme tells the browser which theme the page is in, so the parts it
+   draws itself (scrollbars, form controls) match. */
+:root { color-scheme: light; }
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0e1114;
+  --surface: #161a1e;
+  --text: #e8eaed;
+  --muted: #9aa0a6;
+  --faint: #666b72;
+  --line: #23282d;
+  --accent: #e8eaed;
+  --term-bg: #080a0c;
+  --code-dim: #80868d;
+  --code-string: var(--term-green);
+}
+
+/* :not([data-theme="light"]) = "unless the visitor picked light". */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
     --bg: #0e1114;
     --surface: #161a1e;
     --text: #e8eaed;
@@ -191,11 +219,10 @@ kbd {
 
 .header-end { display: flex; align-items: center; gap: var(--s3); }
 
-/* The two buttons share a wrapper so the side rail (section 14) can put them on
-   their own row. Here, in the top bar, display: contents makes the wrapper
-   "disappear" from the layout: its children behave as if they sat directly in
-   .header-end, so the bar looks exactly as it did before the wrapper existed. */
-.header-tools { display: contents; }
+/* The three buttons share a wrapper so the side rail (section 14) can put them on
+   their own row. Here, in the top bar, it keeps them together as one group, a
+   small gap apart, so they take less room than three separate items would. */
+.header-tools { display: flex; align-items: center; gap: var(--s1); }
 
 /* Parts of the header that only the side rail shows (see SITE-HEADER in pages.lisp).
    display: none also hides them from screen readers, so nothing is read twice.
@@ -292,7 +319,60 @@ kbd {
 .cmdk-button[hidden] { display: none; } /* our display:inline-flex would beat hidden */
 .cmdk-button:hover { color: var(--text); border-color: var(--faint); background: var(--surface); }
 
-/* Six links, two buttons and the name don't fit in one bar on a small tablet.
+/* The theme switch (static/theme.js): the same quiet pill as "(λ) source".
+   In the top bar it shows only a glyph: ◐ auto, ☀ light, ☾ dark. The side rail
+   (section 14) has room for the word too. The word stays in the HTML for screen
+   readers either way, hidden the same way as .sr-only. */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--muted);
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+.theme-toggle[hidden] { display: none; }
+.theme-toggle:hover { color: var(--text); border-color: var(--faint); background: var(--surface); }
+/* The three glyphs aren't in Geist Mono, so the browser borrows them from
+   another font, where they're drawn small: 1.25em brings them up to the size of
+   the letters. They also have different widths: a fixed 1em box keeps the
+   button the same size whichever one is showing. line-height: 1 keeps the
+   bigger glyph from making the pill taller than its neighbors. */
+.theme-toggle-glyph {
+  display: inline-block;
+  width: 1em;
+  font-size: 1.25em;
+  line-height: 1;
+  text-align: center;
+}
+.theme-toggle-text {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap;
+}
+
+/* While the theme changes, colors fade for 0.3s instead of jumping. theme.js adds
+   .theme-changing to <html> for that moment only, so it never slows down the
+   other transitions. !important: it must win over every element's own
+   transition list for those 0.3s. The media query keeps it away from people who
+   asked for less motion (theme.js checks that too). */
+@media (prefers-reduced-motion: no-preference) {
+  .theme-changing,
+  .theme-changing *,
+  .theme-changing *::before,
+  .theme-changing *::after {
+    transition: background-color 0.3s var(--ease), color 0.3s var(--ease),
+                border-color 0.3s var(--ease), fill 0.3s var(--ease),
+                stroke 0.3s var(--ease) !important;
+  }
+}
+
+/* Six links, three buttons and the name don't fit in one bar on a small tablet.
    So the bar gives things up in steps as the screen narrows:
      under 52rem: "(λ)" without its word, and the two links whose sections are
                   the easiest to reach by scrolling (About, right under the
@@ -322,6 +402,18 @@ kbd {
     position: absolute; width: 1px; height: 1px; overflow: hidden;
     clip-path: inset(50%); white-space: nowrap;
   }
+}
+
+/* Small phones (360px wide and less): smaller gaps and a slimmer Search pill,
+   then, under 352px, no "Contact" link either (Search and the page itself still
+   lead there). Hiding the whole nav, not just its link, avoids an empty
+   "Sections" landmark. */
+@media (max-width: 24rem) {
+  .header-inner, .header-end { gap: var(--s1); }
+  .cmdk-button { padding: 0.25rem 0.5rem; }
+}
+@media (max-width: 22rem) {
+  .site-header nav { display: none; }
 }
 
 /* ---------- 4. Hero ---------- */
@@ -806,8 +898,10 @@ kbd {
   backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(2px);
 }
+/* A dark page needs a darker veil: the same two cases as the dark tokens (section 1). */
+:root[data-theme="dark"] .cmdk::backdrop { background: rgb(0 0 0 / 0.55); }
 @media (prefers-color-scheme: dark) {
-  .cmdk::backdrop { background: rgb(0 0 0 / 0.55); } /* a dark page needs a darker veil */
+  :root:not([data-theme="light"]) .cmdk::backdrop { background: rgb(0 0 0 / 0.55); }
 }
 
 .cmdk-search {
@@ -1434,6 +1528,14 @@ kbd {
 
   /* The buttons, side by side on their own row. */
   .header-tools { display: flex; flex-wrap: wrap; gap: var(--s1); }
+  /* The rail has room for the theme's word next to its glyph: "◐ auto".
+     "light" is one letter longer than "auto" and "dark"; min-width 5ch (the
+     width of 5 mono letters) keeps the pill from changing size as you click. */
+  .theme-toggle { padding: 0.25rem 0.75rem 0.25rem 0.625rem; }
+  .theme-toggle-text {
+    position: static; width: auto; height: auto; overflow: visible;
+    clip-path: none; min-width: 5ch;
+  }
 
   /* The links sit at the bottom of the column: margin-top: auto takes all the
      free space above them in the flex column. */

@@ -23,7 +23,8 @@ tools: SBCL turns Lisp data into HTML, and plain CSS and JavaScript do the rest.
   build guesses, measures and repeats until the number describes itself.
 - **Diagrams from data.** The architecture and graph diagrams on the project pages
   are written as Lisp lists and drawn as SVG at build time; they animate on scroll.
-- **Quiet details.** A ⌘K command menu (native `<dialog>`, ARIA combobox), a side
+- **Quiet details.** A ⌘K command menu (native `<dialog>`, ARIA combobox), an
+  auto / light / dark theme switch that never flashes the wrong theme, a side
   column with a table of contents on project pages, fingerprinted CSS/JS links so a
   browser never mixes new HTML with an old stylesheet, and videos that only download
   when you scroll to them.

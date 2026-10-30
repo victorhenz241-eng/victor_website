@@ -172,6 +172,7 @@ gets HOME in front, so it still works from the 404 page at a deep address."
                      collect `(:a :href ,(format nil "#~a" id) ,heading))))
        (:div :class "header-tools"
         ,(source-toggle)
+        ,(theme-toggle)
         ,(command-button)))
       ;; Rail only: the links, at the bottom of the column.
       (:ul :class "rail-only rail-links" :aria-label "Links"
@@ -209,6 +210,19 @@ nothing to show (the 404)."
      (:span :class "source-toggle-glyph" :aria-hidden "true"
       (:span :class "c-paren" "(") "λ" (:span :class "c-paren" ")"))
      (:span :class "source-toggle-text" "source")))
+
+(defun theme-toggle ()
+  "The theme switch: auto (follow the system) -> light -> dark -> auto.
+Three settings don't fit aria-pressed (that's for on/off), so the button's
+aria-label says the current setting and what pressing does instead.
+static/theme.js keeps the glyph, the word and the label up to date; Lisp writes
+the \"auto\" version, which is what a first visit gets. Hidden until theme.js
+shows it, like the other buttons that need JavaScript."
+  `(:button :type "button" :class "theme-toggle" :hidden t :data-theme-toggle t
+            :aria-label "Theme: auto (follows your system). Switch to light."
+            :title "Theme: auto (follows your system). Switch to light."
+     (:span :class "theme-toggle-glyph" :aria-hidden "true" "◐")
+     (:span :class "theme-toggle-text" "auto")))
 
 ;;; ------------------------------------------------------------------
 ;;; The command menu (press ⌘K or Ctrl+K, or click "Search" in the header)
@@ -277,7 +291,11 @@ as in SITE-HEADER, so the links work from the home page, a project page and the 
    ;; HOME is the base path (see LAYOUT), and it has nothing to show.
    (unless (equal home *base-path*)
      (list '(:group "Actions" :label "Toggle source view" :action "toggle-source"
-             :hint "(λ)" :keywords ("view source" "lisp" "code"))))))
+             :hint "(λ)" :keywords ("view source" "lisp" "code"))))
+   ;; Every page has the theme switch, the 404 too. theme.js listens for it.
+   (list '(:group "Actions" :label "Switch theme" :action "cycle-theme"
+           :hint "auto · light · dark"
+           :keywords ("dark mode" "light mode" "appearance" "colors")))))
 
 (defun command-menu (home)
   "The <dialog> holding the command menu. It follows the ARIA \"combobox\" pattern:
@@ -341,6 +359,26 @@ characters; ~(~x~) writes that number in lowercase hexadecimal."
                                      :external-format :utf-8)))
     (format nil "~@[~a~]~a?v=~(~x~)" base name (sxhash text))))
 
+(defparameter *theme-script*
+  "{
+  let theme = null;
+  try { theme = localStorage.getItem('victor-site:theme'); } catch (e) {}
+  if (theme === 'light' || theme === 'dark') {
+    document.documentElement.dataset.theme = theme;
+    document.querySelectorAll('meta[name=theme-color]').forEach((meta) => {
+      meta.media = meta.dataset.scheme === theme ? 'all' : 'not all';
+    });
+  }
+}"
+  "The few lines of JavaScript written straight into every page's <head> (see LAYOUT).
+They put the visitor's saved theme on <html> (data-theme=\"dark\") before the
+browser paints anything. In a separate file, loaded with defer like the others,
+they would run after the first paint: a visitor who chose dark on a light system
+would see the page flash white, then turn dark. Then they point the phone's
+browser bar at the same theme: \"all\" = this meta always applies, \"not all\" =
+never. The rest of the switch is in static/theme.js.
+Single quotes in the JavaScript, so the Lisp string needs no backslashes.")
+
 (defun layout (&key title description path base home-page noindex toc rail-title body)
   "The HTML shared by every page. BASE is NIL for normal pages, which keeps every
 link relative (\"style.css\"), so the site works at any address. Given a BASE like
@@ -383,8 +421,16 @@ TOC and RAIL-TITLE are for the side rail (see SITE-HEADER and DEFPAGE)."
         ,(when url `(:link :rel "canonical" :href ,url))
         ,(when noindex '(:meta :name "robots" :content "noindex"))
         ;; The color phones give the browser bar around the page, one per theme.
-        (:meta :name "theme-color" :content "#fafafb" :media "(prefers-color-scheme: light)")
-        (:meta :name "theme-color" :content "#0e1114" :media "(prefers-color-scheme: dark)")
+        ;; data-scheme lets *THEME-SCRIPT* and theme.js find the right one when the
+        ;; visitor picks a theme by hand.
+        (:meta :name "theme-color" :content "#fafafb" :media "(prefers-color-scheme: light)"
+               :data-scheme "light")
+        (:meta :name "theme-color" :content "#0e1114" :media "(prefers-color-scheme: dark)"
+               :data-scheme "dark")
+        ;; Right after those metas (it changes them) and before any stylesheet:
+        ;; the saved theme is on <html> before the first paint. (:raw ...) because
+        ;; RENDER would turn the script's quotes and => into &quot; and &gt;.
+        (:script (:raw ,*theme-script*))
         ;; The tab icon. Without one, every browser asks for /favicon.ico and gets a 404.
         (:link :rel "icon" :type "image/svg+xml" :href ,(format nil "~@[~a~]favicon.svg" base))
         ;; The fonts' stylesheet blocks the first paint until it arrives (one small
@@ -408,7 +454,8 @@ TOC and RAIL-TITLE are for the side rail (see SITE-HEADER and DEFPAGE)."
         ;; defer = download now, run after the HTML is parsed.
         (:script :src ,(asset-url "motion.js" base) :defer t)
         (:script :src ,(asset-url "command-menu.js" base) :defer t)
-        (:script :src ,(asset-url "source-view.js" base) :defer t))
+        (:script :src ,(asset-url "source-view.js" base) :defer t)
+        (:script :src ,(asset-url "theme.js" base) :defer t))
        (:body :id "top"
         ;; The first thing Tab reaches: keyboard users can jump past the header
         ;; straight to the content. Off screen until it has the focus (style.css).
