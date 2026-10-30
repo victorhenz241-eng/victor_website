@@ -193,7 +193,7 @@ blank lines and comments between them, exactly as written."
 ;;; 3. The tokenizer: text -> colored spans
 ;;;
 ;;; It walks the text one character at a time and decides what each run of
-;;; characters is. It doesn't need to understand Lisp, only to recognise:
+;;; characters is. It doesn't need to understand Lisp, only to recognize:
 ;;;   ; comment        "string"        :keyword        ( ) ' ` , #'
 ;;;   (operator        anything-else  (plain symbols, numbers)
 ;;; Every piece stays a Lisp string, so the renderer escapes it like any text.

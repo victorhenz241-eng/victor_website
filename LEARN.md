@@ -180,7 +180,7 @@ content.lisp ─┐
               ├─► pages.lisp ─► html.lisp ─► public/index.html   STRUCTURE (Lisp)
               │                                  │
 static/style.css ────────────────────────────────┤               LOOK + MOTION (CSS)
-static/motion.js ────────────────────────────────┘               BEHAVIOUR (JS)
+static/motion.js ────────────────────────────────┘               BEHAVIOR (JS)
 ```
 
 - **Lisp** decides *what* is on the page and *marks* things that should move.
@@ -314,7 +314,7 @@ appears under it, so it reads as a bar sitting on top of the content.
    .site-header.is-scrolled .header-inner { transform: translateY(0.25rem); }
    ```
    The header slides up 8px (its top goes off screen) and its content slides down 4px,
-   so it *looks* 8px shorter with everything still centred.
+   so it *looks* 8px shorter with everything still centered.
 
 **Why not listen to `scroll`?** That works too, but the `scroll` event fires up to 60
 times a second, and you'd have to throttle it with `requestAnimationFrame`. The
@@ -332,7 +332,7 @@ comes, so the border just stays. A rule like "hide it whenever JS runs" would ha
 left those browsers with no border at all.
 
 **Try it:** make the sentinel `height: 30rem` so the header changes later, or remove
-`.header-inner`'s transform and watch the content stop being centred.
+`.header-inner`'s transform and watch the content stop being centered.
 
 ---
 
@@ -346,7 +346,7 @@ dark and gets a thin line under it that grows from the left.
    only the links whose `href` starts with `#` and whose section exists. On a project
    page or the 404 nothing gets highlighted. We considered lighting up "Projects" on
    project pages, but that link goes to the home page, not to the page you're on, so
-   it would be slightly misleading. The "← All work" link already tells you where you are.
+   it would be slightly misleading. The "← All projects" link already tells you where you are.
 2. **Which section is "current"?** An IntersectionObserver with
    `rootMargin: "-35% 0px -60% 0px"`. A negative margin *shrinks* the area being watched,
    here to a thin band about a third of the way down the screen, which is roughly where
@@ -474,7 +474,7 @@ inside `(defpage "index.html" ...)`), `elements` runs the same loop starting jus
 after the list's `(`. That's how a case-study page shows only its own project.
 
 **Step 3: color it with a tokenizer** (`highlight`, section 3). It walks the text one
-character at a time and recognises a few shapes: `;` to the end of the line is a
+character at a time and recognizes a few shapes: `;` to the end of the line is a
 comment, `"` to the next unescaped `"` is a string, `:word` is a keyword, a symbol
 right after `(` is an operator, parens and quote marks are punctuation, and `#\x`
 is a single character (so `#\;` doesn't start a comment). Each piece
@@ -522,7 +522,7 @@ page is exactly the same as before.** `static/source-view.js` copies the panels 
    after, scrolls by the difference. You stay on the same section.
 4. Coming back with the source view already on, there's no animation and nothing to
    hold in place: the swap happens once, at load. If the address has a `#section`
-   (the "← All work" link goes to `./#projects`), JS jumps to it again, because the
+   (the "← All projects" link goes to `./#projects`), JS jumps to it again, because the
    browser's first jump was measured on the old, shorter layout.
 
 `hidden` matters for accessibility: a screen reader reads either the content or the

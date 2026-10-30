@@ -41,7 +41,7 @@ apps like LinkedIn need that picture's full address, a relative one won't do.")
 the italic part gets its own <em> tag. Lisp data and HTML are the same thing here.")
 
 (defparameter *intro*
-  "AI engineering student with a 4.0 GPA. I built and shipped two AI tools used in production at Canal+, and won first place among 120 participants at the Secure Horizons 2026 hackathon with a 4-person team. I'm looking for a Summer 2027 internship in applied AI or data science."
+  "AI engineering student with a 4.0 GPA. I built and shipped two AI tools used in production at Canal+, and won first place among 120 participants at the Secure Horizons 2026 hackathon with a 4-person team. I'm looking for a Summer 2027 internship in applied AI or data science in New York or San Francisco. Based in Washington, DC from January 2027."
   "Also used as the page's meta description, the snippet search engines show.")
 
 (defparameter *about*
@@ -82,24 +82,24 @@ animation stays short.")
   '((:role "AI Engineer Intern"
      :org "Canal+ · Benelux Central Europe (BCE)"
      :place "Luxembourg"
-     :dates "May 2026 · 3 months"
-     :summary "Built and shipped two internal AI apps (Next.js, Cloud Run) for natural-language queries over company data. Designed the Snowflake Cortex Analyst semantic layer, and moved the curation agent to a text-to-SQL microservice that scored 35/36 on an automated eval suite. The Canal+ group CEO asked for a live demo.")
+     :dates "May – Aug 2026"
+     :summary "Built and shipped two internal AI apps (Next.js, Cloud Run) that let Canal+ leadership and editorial teams query company data in natural language. Designed the Snowflake Cortex Analyst semantic layer, and built a text-to-SQL microservice (FastAPI, Docker) that moved the curation agent onto the group's internal AI platform, scoring 35/36 (97%) on an automated eval suite. The Canal+ group CEO asked for a live demo.")
     (:role "Co-founder & Developer"
      :org "Parsed"
      :place "Luxembourg"
      :dates "Jan 2025 · 6 months"
-     :summary "Co-founded an AI news app with my brother Vivien and launched it on the App Store, personalized to each user's profession and location. Built the personalization engine and a political-bias detector, back when AI coding tools were still early. Grew it to 2,000+ users, with coverage in the Luxembourg press. The app is no longer live, but building it, launching it and trying to sell it taught me more about products than anything before."))
+     :summary "Co-founded, with my brother Vivien, an AI news app personalized to each user's profession and location, and launched it on the App Store. Built the personalization engine and a political-bias detector, back when AI coding tools were still early. Grew it to 2,000+ users, with coverage in the Luxembourg press. The app is no longer live, but building it, launching it and trying to sell it taught me more about products than anything before."))
   "Newest first, one plist per role.")
 
 (defparameter *skills*
   ;; Each list is (group skill skill ...). The first two groups' skills come from
-  ;; the CV; Claude, Neo4j, React, Supabase, n8n and Common Lisp come from the
-  ;; projects on this site, where they were part of what I built myself.
+  ;; the CV; Claude, Neo4j, React, Rust, Supabase, n8n and Common Lisp come from
+  ;; the projects on this site, where they were part of what I built myself.
   '(("AI & data"
      "LLM agents" "LLM evaluation" "Text-to-SQL" "Semantic modeling"
      "Snowflake Cortex Analyst" "Snowflake Cortex Agents" "Claude on Amazon Bedrock")
     ("Languages & frameworks"
-     "Python" "SQL" "TypeScript" "Next.js" "FastAPI" "React" "Common Lisp")
+     "Python" "SQL" "TypeScript" "Rust" "Next.js" "FastAPI" "React" "Common Lisp")
     ("Infrastructure & tools"
      "Docker" "Neo4j" "Google Cloud Run" "Vercel" "Supabase" "n8n" "Git"))
   "The toolbox, grouped so a reader can scan it in a few seconds.")
@@ -165,7 +165,7 @@ animation stays short.")
      :url "https://github.com/Coachbet/projet_utopia"
      :featured t
      :blurb "Real-time protection against phone scams and AI-cloned voices. 1st of 120 at the Secure Horizons 2026 hackathon."
-     :summary "Won first place among 120 participants at the Secure Horizons 2026 hackathon (ESSEC) and the €7,000 prize, with a 4-person team. We built a product that detects phone scams and AI-cloned voices while the call is happening."
+     :summary "Won first place and the €7,000 prize among 120 participants at the Secure Horizons 2026 hackathon (ESSEC), with a 4-person team. We built a product that detects phone scams and AI-cloned voices while the call is happening."
      :tags ("hackathon winner" "Claude" "Twilio" "FastAPI" "wav2vec2")
      :links (("Code" "https://github.com/Coachbet/projet_utopia"))
      :stats (("1st" "of 120 participants, Secure Horizons 2026")
@@ -233,7 +233,7 @@ animation stays short.")
      :url "https://event-market-graph-ten.vercel.app"
      :featured t
      :blurb "A Neo4j knowledge graph linking geopolitical events to market moves, walked by a LangGraph agent."
-     :summary "A Neo4j knowledge graph linking geopolitical events to market moves, with a LangGraph agent that walks it. Team project: I built the animated frontend and the infrastructure."
+     :summary "A Neo4j knowledge graph linking geopolitical events to market moves, with a LangGraph agent that walks it. 5-person team project: I built the animated React frontend and the Docker infrastructure."
      :tags ("Neo4j" "LangGraph" "React" "Docker")
      ;; A 9-second silent loop for the home page card: the agent walking the graph,
      ;; cut from a screen recording of the live demo. Without the file, the card
@@ -244,25 +244,26 @@ animation stays short.")
      :stats (("6" "market series: Brent, WTI, EURUSD, USDJPY, US 10Y, VIX")
              ("~4,500" "geopolitical and central-bank events")
              ("880" "daily price points")
-             ("6 months" "of events and prices, Feb–Jul 2026"))
+             ("6 months" "of events and prices, Feb – Jul 2026"))
      ;; A screen recording of the live demo replaying one agent run. It is silent
      ;; (no :sound), so it loops while it's on screen, like the card videos; the
      ;; page adds a "Live demo" link after the caption.
      :video (:file "media/event-market-demo.mp4"
              :poster "media/event-market-poster.jpg"
-             :caption "A recorded replay of the live demo. The agent answers: \"Why did the VIX move in June?\"")
+             :caption "A recorded replay of the live demo. The agent answers: \"Why did the VIX move in June?\""
+             ;; :alt names the video for screen readers; the caption is for everyone.
+             :alt "Screen recording of the Event-Market Graph demo: the agent answers \"Why did the VIX move in June?\" while the graph nodes and paths it walks light up.")
      ;; Each section is (heading paragraph paragraph ...).
      :sections
      (("The question"
        "When oil or the VIX jumps, what happened in the days before? Geopolitical events and market prices live in separate datasets. This project puts them in one Neo4j graph, where events and prices meet on a shared trading-day node.")
       ("What I built"
-       "It was a team project. I built the frontend and the infrastructure."
        "The frontend is a React page that lays the graph out as a timeline: markets on top, trading days in the middle, events, themes and countries below. When the agent answers a question, each step appears as it happens, the nodes it touches light up and the edges it walks are animated."
        "The infrastructure runs the whole stack with Docker Compose: Neo4j with Graph Data Science, a local Ollama model, the API and an Nginx reverse proxy. Every port is bound to localhost, the proxy rate-limits requests, and asking the model needs an API key.")
       ("How it works"
        "Events come from GDELT and from central-bank rate decisions; prices come from FRED. The API computes correlations, candidate events for a move, shortest paths and PageRank. A LangGraph agent answers questions in plain English and shows the graph paths and the Cypher it used.")
       ("Safety by design"
-       "Every correlation is labelled a hypothesis, never a cause. Asked to \"delete all the events\", the model wrote a DELETE query; it was rejected before reaching Neo4j, which the API opens read-only anyway."
+       "Every correlation is labeled a hypothesis, never a cause. Asked to \"delete all the events\", the model wrote a DELETE query; it was rejected before reaching Neo4j, which the API opens read-only anyway."
        "The public demo is a replay-only build with no backend, so nothing on it can reach the API, the model or the database."))
      ;; The schema as a picture, drawn by pages.lisp (DIAGRAM-SVG):
      ;;   :at (column row)    where a box sits on a grid; here rows run top to
@@ -300,46 +301,49 @@ animation stays short.")
      :slug "internship-radar"
      :url "https://github.com/victorhenz241-eng/intership_finder"
      :featured t
-     :blurb "Turns ~16,000 internship listings into a short list worth applying to, every night, for about €0 a month."
-     :summary "Turns ~16,000 internship listings into a short list worth applying to, every night. Six n8n workflows, a Rust dedup service and a Next.js app, for about €0 a month."
+     :blurb "Scans ~16,000 internship listings every night and surfaces the ~300 strong matches, for about €0 a month."
+     :summary "Scans ~16,000 internship listings every night and surfaces the strong matches: about 300 of the 1,375 roles scored in the inbox, as of October 2026. Six n8n workflows, a Rust dedup service and a Next.js app, for about €0 a month."
      :tags ("n8n" "Next.js" "Supabase" "Rust")
      :links (("Code" "https://github.com/victorhenz241-eng/intership_finder"))
      :stats (("~16,000" "listings scanned")
-             ("~250" "roles kept in the table")
+             ("1,375" "roles scored in the inbox")
              ("6" "n8n workflows")
              ("≈ €0" "a month, all free tiers"))
      ;; An 8.5-second silent loop for the home page card: a role opens with its
      ;; fit score, goes into the pipeline, and the pipeline board appears. Cut from
      ;; a screen recording of the live app, with every company and person name
-     ;; blurred (the recording itself stays private, on Victor's computer).
+     ;; blurred (the original, unblurred recording is not published).
      :card (:video "media/internship-radar-card.mp4" :poster "media/internship-radar-card-poster.jpg")
      ;; The edited demo (25 s): inbox, eligibility, filters, a role's fit score,
      ;; the pipeline, then the people search. Silent (no :sound), so it loops
      ;; while it's on screen, with a Pause button, like Event-Market's.
      :video (:file "media/internship-radar-demo.mp4"
              :poster "media/internship-radar-poster.jpg"
-             :caption "Recorded in the live app. Company and contact names are blurred.")
+             :caption "Recorded in the live app. Company and contact names are blurred."
+             :alt "Screen recording of the Internship Radar app: the inbox of scored roles, the eligibility check, the filters, a role's fit score, the pipeline board and the people search. Company and contact names are blurred.")
      :sections
      (("The problem"
        "Finding an internship has two hard parts. Aggregators list thousands of postings and most don't fit one person. And cold applications go through applicant-tracking systems where nothing comes back. The best channel is a warm contact at the company.")
       ("What I built"
        "Automations that run overnight with no one present: they fetch listings, score them against a fixed profile with an LLM, check eligibility (reading the full job description when the posting is on Greenhouse or Lever), and fold duplicates through a small Rust service. Everything lands in one Postgres table on Supabase."
-       "A Next.js web app is the only thing I touch. It reads that table, lets me triage quickly, tracks each role through a pipeline, searches for people at the company and drafts outreach text. A Telegram bot with an AI agent answers questions about the table.")
+       "A Next.js web app is the main thing I use. It reads that table, lets me triage quickly, tracks each role through a pipeline, searches for people at the company and drafts outreach text. A Telegram bot with an AI agent answers questions about the table.")
       ("Two rules that shape it"
        "The automations write, the app updates a few columns, and nothing is ever deleted: a dismissed role stays in the table so the next night's sweep doesn't add it back."
        "The LinkedIn part stays manual. The app prepares text and tracks threads, but never sends a message, never connects and never fetches a LinkedIn page, because automating LinkedIn gets accounts restricted.")
       ("Stack"
        "Self-hosted n8n in Docker on a Google Cloud VM behind Caddy, a Rust dedup service, Groq for the LLM, Supabase (Postgres, auth, row-level security) and Next.js on Vercel."))
-     ;; The real funnel, counted in the live system (no company names). The bars
+     ;; The real funnel, counted in the live app in October 2026: the same numbers
+     ;; the demo video shows (no company names). The bars
      ;; grow when they scroll into view (FUNNEL in pages.lisp). Each step is
      ;; (shown-value count label): COUNT sets the bar's length.
      :funnel
      (:heading "The funnel"
       :after "What I built"
-      :caption "Counted in the live system, as of October 2026. Bar lengths use a log scale, so the small steps stay visible."
+      :caption "Counted in the live app, as of October 2026: the numbers in the demo video. Bar lengths use a log scale, so the small steps stay visible."
       :steps (("~16,000" 16000 "listings scanned")
-              ("~250" 250 "kept in the table")
-              ("12" 12 "shortlisted")
+              ("1,375" 1375 "scored in the inbox")
+              ("~300" 300 "strong matches")
+              ("20" 20 "in the pipeline")
               ("7" 7 "applications sent")))
      ;; The architecture as a picture, drawn by pages.lisp (DIAGRAM-SVG):
      ;;   :at (column row)    where a box sits on a grid; columns run left to right
@@ -376,9 +380,9 @@ animation stays short.")
               (db -> bot "reads"))
       :pulse (listings sweep db app)))
     (:name "This website"
-     :url nil                           ; private: TODO: the victor_website repo is private — link it once public
+     :url nil                           ; private: add the repo URL when the repo is public
      :blurb "Generated by Common Lisp, with a tiny HTML renderer written from scratch. No framework."
-     :summary "Generated by a few hundred lines of Common Lisp, including a tiny HTML renderer written from scratch. No framework."
+     :summary "Generated by Common Lisp, including a small HTML renderer written from scratch. No framework."
      :tags ("Common Lisp" "CSS" "vanilla JS")
      ;; :lines-of-lisp = "count them during the build" (the same number as the footer).
      :stat :lines-of-lisp))
