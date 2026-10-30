@@ -36,16 +36,16 @@ apps like LinkedIn need that picture's full address, a relative one won't do.")
   "The small monospace line above the big headline.")
 
 (defparameter *headline*
-  '("I build AI tools on top of " (:em "real data") ".")
+  '("Hi, I'm Victor." (:br) "Welcome to my " (:em "website") ".")
   "The big serif headline. Notice it's an HTML tree, not a string: that's how
-the italic part gets its own <em> tag. Lisp data and HTML are the same thing here.")
+the italic part gets its own <em> tag, and (:br) breaks the line. Lisp data and HTML are the same thing here.")
 
 (defparameter *intro*
   "AI engineering student with a 4.0 GPA. I built and shipped two AI tools used in production at Canal+, and won first place among 120 participants at the Secure Horizons 2026 hackathon with a 4-person team. I'm looking for a Summer 2027 internship in applied AI or data science in New York or San Francisco. Based in Washington, DC from January 2027."
   "Also used as the page's meta description, the snippet search engines show.")
 
 (defparameter *about*
-  '("Hi, I'm Victor, and I like building things."
+  '("I like building things."
     "I'm fascinated by AI and how fast it's moving. Every week the tools get a little better, and the world quietly rearranges itself around them. I don't just want to watch that happen: I want to help build it, one useful tool at a time."
     "On this site you'll find what I've built, where I've worked, and what keeps me busy away from the keyboard. Enjoy!")
   "Each string becomes one paragraph.")

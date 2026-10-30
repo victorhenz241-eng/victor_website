@@ -105,7 +105,7 @@ needs one, and if it's wrong the only harm is a missing picture."
 
 (defparameter *og-image*
   '(:file "og.png" :width 1200 :height 630
-    :alt "Victor Henz. AI engineering, CentraleSupélec × ESSEC. I build AI tools on top of real data.")
+    :alt "Victor Henz. AI engineering, CentraleSupélec × ESSEC. Hi, I'm Victor. Welcome to my website.")
   "The link-preview picture (static/og.png, made by scripts/make-og.sh), its size
 in pixels, and its description for people who can't see it.")
 
