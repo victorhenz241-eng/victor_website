@@ -389,6 +389,10 @@ kbd {
   transition: color 0.2s, border-color 0.2s;
 }
 .terminal-toggle:hover { color: var(--term-text); border-color: rgb(255 255 255 / 0.3); }
+/* The usual focus ring is --accent, which in light mode is the same near-black
+   as the terminal: invisible (1:1). On the dark terminal it takes the
+   terminal's light text color instead (about 12:1). */
+.terminal-toggle:focus-visible { outline-color: var(--term-text); }
 
 .terminal-body {
   margin: 0;
@@ -503,8 +507,18 @@ kbd {
 /* The picture area. aspect-ratio keeps a 16:10 box whatever fills it, so the
    page never jumps while a video or photo loads. object-fit: cover fills that
    box and trims what sticks out, like a photo in a frame. */
+/* z-index 2 + pointer-events: none: the picture sits *above* the link's
+   invisible layer (.card-link::after, z-index 1), but lets clicks fall through
+   to it, so a click on the picture still opens the project. Only its Pause
+   button takes clicks back (pointer-events: auto, below). Why not just give
+   the button a bigger z-index? Because the hover lift (transform) turns
+   .card-media into a "stacking context": a closed box whose children's
+   z-index only counts *inside* it. The button then sank under the link the
+   moment the mouse arrived, and a click on Pause opened the case study. */
 .card-media {
   position: relative;
+  z-index: 2;
+  pointer-events: none;
   aspect-ratio: 16 / 10;
   overflow: hidden;
   border: 1px solid var(--line);
@@ -555,8 +569,9 @@ kbd {
   align-items: center;
 }
 
-/* The Pause button sits above the link's layer (z-index), bottom right. */
-.media-toggle { position: absolute; right: var(--s1); bottom: var(--s1); z-index: 2; }
+/* The Pause button, bottom right. pointer-events: auto takes back the clicks
+   that .card-media lets fall through (see above). */
+.media-toggle { position: absolute; right: var(--s1); bottom: var(--s1); z-index: 2; pointer-events: auto; }
 
 /* Fallback tiles: when there's no photo or video yet, the card draws something
    true from the project's data: a big number, the funnel, or the diagram.
@@ -1103,6 +1118,14 @@ kbd {
 }
 .diagram-toggle:hover { color: var(--text); border-color: var(--faint); }
 .diagram-toggle[hidden] { display: none; }
+/* A Pause button sitting on a video: the pixels behind it can be any color,
+   so the focus ring brings its own background. The box-shadow paints a ring of
+   page color 6px wide around the button, and the outline (2px, 2px away)
+   is drawn on top of it: ink on page color, whatever the video shows. */
+.media-toggle:focus-visible, .demo-toggle:focus-visible {
+  outline-offset: 2px;
+  box-shadow: 0 0 0 6px var(--bg);
+}
 
 /* The walk's steps, as a real list under the picture. motion.js marks the
    current step; without JS it's just a readable list. */
