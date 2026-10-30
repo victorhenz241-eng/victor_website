@@ -71,16 +71,20 @@ in a fallback font and switches when the real one arrives, so a slow network
 never leaves the page blank.")
 
 (defparameter *font-preloads*
-  '("https://fonts.gstatic.com/s/literata/v40/or3aQ6P12-iJxAIgLa78DkrbXsDgk0oVDaDPYLanFLHpPf2TbBG_df3-vbgKBM6YoggA-vpO-7cHM524.woff2"
-    "https://fonts.gstatic.com/s/literata/v40/or3NQ6P12-iJxAIgLYT1PLs1Zd0nfUwAbeGVKoRYzNiCp1OUedn8_7XmTkiSlc2Fohhg.woff2"
-    "https://fonts.gstatic.com/s/geist/v5/gyByhwUxId8gMEwcGFWNOITd.woff2")
-  "The font files the first screen needs most: Literata upright and italic (the
-headline) and Geist (the text), Latin letters only. Normally the browser only
+  '(("https://fonts.gstatic.com/s/literata/v40/or3aQ6P12-iJxAIgLa78DkrbXsDgk0oVDaDPYLanFLHpPf2TbBG_df3-vbgKBM6YoggA-vpO-7cHM524.woff2" :every-page)
+    ("https://fonts.gstatic.com/s/literata/v40/or3NQ6P12-iJxAIgLYT1PLs1Zd0nfUwAbeGVKoRYzNiCp1OUedn8_7XmTkiSlc2Fohhg.woff2" :home-page)
+    ("https://fonts.gstatic.com/s/geist/v5/gyByhwUxId8gMEwcGFWNOITd.woff2" :every-page))
+  "The font files the first screen needs most, each with where it's needed:
+Literata upright (every headline), Literata italic (only the home headline has
+italic words) and Geist (the text), Latin letters only. Normally the browser only
 discovers them after it has read the fonts' stylesheet; a preload asks for them
 at once, so they arrive sooner and the headline changes font earlier, often
-before the first paint. These are the addresses Google's stylesheet gives today
-(open *FONT-URL* in a browser to see them). If Google changes them one day,
-nothing breaks: the browser just downloads a file it doesn't use.")
+before the first paint. A preload is a promise to use the file: on a page that
+never shows it, it's a wasted download (and Chrome warns about it in the
+console), hence :HOME-PAGE for the italic. These are the addresses Google's
+stylesheet gives today (open *FONT-URL* in a browser to see them). If Google
+changes them one day, nothing breaks: the browser just downloads a file it
+doesn't use.")
 
 (defun page-url (path)
   "The full address of the page written to PATH, e.g. \"https://victorhenz.com/\"
@@ -393,9 +397,12 @@ TOC and RAIL-TITLE are for the side rail (see SITE-HEADER and DEFPAGE)."
         (:link :rel "stylesheet" :href ,*font-url*)
         ;; crossorigin is required: fonts are always fetched that way, and a
         ;; preload made without it isn't reused (the font is downloaded twice).
-        ,@(loop for font in *font-preloads*
-                collect `(:link :rel "preload" :as "font" :type "font/woff2"
-                                :href ,font :crossorigin t))
+        ;; FOR (FONT WHERE) IN takes each two-item entry apart as it goes, like a
+        ;; small DESTRUCTURING-BIND; WHEN skips the ones this page doesn't need.
+        ,@(loop for (font where) in *font-preloads*
+                when (or (eq where :every-page) home-page)
+                  collect `(:link :rel "preload" :as "font" :type "font/woff2"
+                                  :href ,font :crossorigin t))
         ;; ASSET-URL adds a fingerprint, so a browser never mixes new HTML with old CSS.
         (:link :rel "stylesheet" :href ,(asset-url "style.css" base))
         ;; defer = download now, run after the HTML is parsed.
