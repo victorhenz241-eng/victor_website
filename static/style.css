@@ -15,6 +15,20 @@
 
 /* ---------- 1. Tokens ---------- */
 
+/* Fallback fonts that take the same room as the real ones.
+   While Literata and Geist download, the text shows in Georgia and Arial
+   (display=swap). Literata is about 6% wider than Georgia, so the headline used
+   to break its lines differently, then jump when Literata arrived, pushing
+   everything below it down (a "layout shift"). These two @font-face rules
+   create new font names that are just Georgia and Arial scaled up or down
+   (size-adjust) to the real fonts' widths, measured on this site's own text.
+   local() means "a font already installed on this computer": nothing is
+   downloaded. A system without Georgia or Arial skips the rule and uses the
+   next font in the list. */
+@font-face { font-family: "Literata fallback"; src: local("Georgia"); size-adjust: 106.4%; }
+@font-face { font-family: "Literata fallback"; font-style: italic; src: local("Georgia Italic"), local("Georgia-Italic"); size-adjust: 98%; }
+@font-face { font-family: "Geist fallback"; src: local("Arial"), local("ArialMT"); size-adjust: 102.8%; }
+
 :root {
   --bg: #fafafb;
   --surface: #f1f1f3;
@@ -41,8 +55,8 @@
        --line           decoration only: dividers, resting borders
      The numbers for every pair are in LEARN.md ("Contrast, checked"). */
 
-  --font-display: "Literata", Georgia, serif;
-  --font-body: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Literata", "Literata fallback", Georgia, serif;
+  --font-body: "Geist", "Geist fallback", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
   --s1: 0.5rem; --s2: 1rem; --s3: 1.5rem; --s4: 2rem; --s6: 3rem; --s8: 4rem; --s12: 6rem;
@@ -326,7 +340,12 @@ kbd {
   font-size: clamp(2.5rem, 7vw, 4.25rem);
   letter-spacing: -0.025em;
   line-height: 1.05;
-  max-width: 14ch;
+  /* em, not ch: 1ch is the width of "0" in whatever font is showing, and
+     Georgia's "0" is much narrower than Literata's. With 14ch the box shrank
+     while the fallback font was up, "on" dropped to a third line, and the
+     page jumped when Literata arrived. 8.25em is about 14ch of Literata, with
+     a little room to spare: the first line "I build AI tools on" fills 96% of it. */
+  max-width: 8.25em;
 }
 
 .hero h1 em { font-style: italic; color: var(--muted); }

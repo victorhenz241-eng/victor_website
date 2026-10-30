@@ -70,6 +70,18 @@ to see what this macro actually writes for you."
 in a fallback font and switches when the real one arrives, so a slow network
 never leaves the page blank.")
 
+(defparameter *font-preloads*
+  '("https://fonts.gstatic.com/s/literata/v40/or3aQ6P12-iJxAIgLa78DkrbXsDgk0oVDaDPYLanFLHpPf2TbBG_df3-vbgKBM6YoggA-vpO-7cHM524.woff2"
+    "https://fonts.gstatic.com/s/literata/v40/or3NQ6P12-iJxAIgLYT1PLs1Zd0nfUwAbeGVKoRYzNiCp1OUedn8_7XmTkiSlc2Fohhg.woff2"
+    "https://fonts.gstatic.com/s/geist/v5/gyByhwUxId8gMEwcGFWNOITd.woff2")
+  "The font files the first screen needs most: Literata upright and italic (the
+headline) and Geist (the text), Latin letters only. Normally the browser only
+discovers them after it has read the fonts' stylesheet; a preload asks for them
+at once, so they arrive sooner and the headline changes font earlier, often
+before the first paint. These are the addresses Google's stylesheet gives today
+(open *FONT-URL* in a browser to see them). If Google changes them one day,
+nothing breaks: the browser just downloads a file it doesn't use.")
+
 (defun page-url (path)
   "The full address of the page written to PATH, e.g. \"https://victorhenz.com/\"
 for index.html. NIL while *DOMAIN* is NIL: without a domain the final address
@@ -379,6 +391,11 @@ TOC and RAIL-TITLE are for the side rail (see SITE-HEADER and DEFPAGE)."
         (:link :rel "preconnect" :href "https://fonts.googleapis.com")
         (:link :rel "preconnect" :href "https://fonts.gstatic.com" :crossorigin t)
         (:link :rel "stylesheet" :href ,*font-url*)
+        ;; crossorigin is required: fonts are always fetched that way, and a
+        ;; preload made without it isn't reused (the font is downloaded twice).
+        ,@(loop for font in *font-preloads*
+                collect `(:link :rel "preload" :as "font" :type "font/woff2"
+                                :href ,font :crossorigin t))
         ;; ASSET-URL adds a fingerprint, so a browser never mixes new HTML with old CSS.
         (:link :rel "stylesheet" :href ,(asset-url "style.css" base))
         ;; defer = download now, run after the HTML is parsed.
