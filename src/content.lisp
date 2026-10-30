@@ -87,7 +87,7 @@ animation stays short.")
     (:role "Co-founder & Developer"
      :org "Parsed"
      :place "Luxembourg"
-     :dates "Jan 2025 · 6 months"
+     :dates "Jan – Jun 2025"
      :summary "Co-founded, with my brother Vivien, an AI news app personalized to each user's profession and location, and launched it on the App Store. Built the personalization engine and a political-bias detector, back when AI coding tools were still early. Grew it to 2,000+ users, with coverage in the Luxembourg press. The app is no longer live, but building it, launching it and trying to sell it taught me more about products than anything before."))
   "Newest first, one plist per role.")
 
