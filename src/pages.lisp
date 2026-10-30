@@ -70,6 +70,22 @@ to see what this macro actually writes for you."
 in a fallback font and switches when the real one arrives, so a slow network
 never leaves the page blank.")
 
+(defparameter *font-preloads*
+  '(("https://fonts.gstatic.com/s/literata/v40/or3aQ6P12-iJxAIgLa78DkrbXsDgk0oVDaDPYLanFLHpPf2TbBG_df3-vbgKBM6YoggA-vpO-7cHM524.woff2" :every-page)
+    ("https://fonts.gstatic.com/s/literata/v40/or3NQ6P12-iJxAIgLYT1PLs1Zd0nfUwAbeGVKoRYzNiCp1OUedn8_7XmTkiSlc2Fohhg.woff2" :home-page)
+    ("https://fonts.gstatic.com/s/geist/v5/gyByhwUxId8gMEwcGFWNOITd.woff2" :every-page))
+  "The font files the first screen needs most, each with where it's needed:
+Literata upright (every headline), Literata italic (only the home headline has
+italic words) and Geist (the text), Latin letters only. Normally the browser only
+discovers them after it has read the fonts' stylesheet; a preload asks for them
+at once, so they arrive sooner and the headline changes font earlier, often
+before the first paint. A preload is a promise to use the file: on a page that
+never shows it, it's a wasted download (and Chrome warns about it in the
+console), hence :HOME-PAGE for the italic. These are the addresses Google's
+stylesheet gives today (open *FONT-URL* in a browser to see them). If Google
+changes them one day, nothing breaks: the browser just downloads a file it
+doesn't use.")
+
 (defun page-url (path)
   "The full address of the page written to PATH, e.g. \"https://victorhenz.com/\"
 for index.html. NIL while *DOMAIN* is NIL: without a domain the final address
@@ -141,7 +157,7 @@ gets HOME in front, so it still works from the 404 page at a deep address."
       ,(if rail-title
            `(:div :class "rail-only rail-context"
               (:a :class "back" :href ,(format nil "~a#projects" home)
-                  (:span :aria-hidden "true" "← ") "All work")
+                  (:span :aria-hidden "true" "← ") "All projects")
               (:p :class "rail-title" ,rail-title))
            `(:p :class "rail-only rail-role" ,*eyebrow*))
       (:div :class "header-end"
@@ -379,6 +395,14 @@ TOC and RAIL-TITLE are for the side rail (see SITE-HEADER and DEFPAGE)."
         (:link :rel "preconnect" :href "https://fonts.googleapis.com")
         (:link :rel "preconnect" :href "https://fonts.gstatic.com" :crossorigin t)
         (:link :rel "stylesheet" :href ,*font-url*)
+        ;; crossorigin is required: fonts are always fetched that way, and a
+        ;; preload made without it isn't reused (the font is downloaded twice).
+        ;; FOR (FONT WHERE) IN takes each two-item entry apart as it goes, like a
+        ;; small DESTRUCTURING-BIND; WHEN skips the ones this page doesn't need.
+        ,@(loop for (font where) in *font-preloads*
+                when (or (eq where :every-page) home-page)
+                  collect `(:link :rel "preload" :as "font" :type "font/woff2"
+                                  :href ,font :crossorigin t))
         ;; ASSET-URL adds a fingerprint, so a browser never mixes new HTML with old CSS.
         (:link :rel "stylesheet" :href ,(asset-url "style.css" base))
         ;; defer = download now, run after the HTML is parsed.
@@ -428,6 +452,12 @@ source panel for ID (see HOME-SECTION-SOURCE in source.lisp), it comes along."
   `(:section :id ,id :class "section"
      (:h2 :class "label" :data-reveal t
       (:span :class "label-num" ,(format nil "~2,'0d" number))
+      ;; On screen the CSS puts a gap between the number and the heading, but
+      ;; there's no space in the text itself, so screen readers said
+      ;; "01The challenge". This invisible ". " (see .sr-only) makes it
+      ;; "01. The challenge". The heading stays the last thing in the <h2>,
+      ;; which PAGE-SECTIONS relies on.
+      (:span :class "sr-only" ". ")
       ,heading)
      ,@(apply #'with-source panel content)))
 
@@ -483,7 +513,7 @@ entries arrive one after another (that's what the index in STAGGER is for)."
 ;;; <path d="M 0 0 C ..."> is a line. Since it's just more tags, the same
 ;;; renderer (html.lisp) writes it. Lisp does the geometry here: where each box
 ;;; goes, where each arrow starts and ends, how it curves. The motion (arrows
-;;; drawing themselves, dots travelling, the agent walk) lives in style.css and
+;;; drawing themselves, dots traveling, the agent walk) lives in style.css and
 ;;; motion.js; LEARN.md, "Effect 11", explains the whole thing.
 ;;;
 ;;; Every diagram is drawn twice: a wide picture for laptops and a narrow one,
@@ -806,20 +836,26 @@ VIDEO is the project's :video plist. Two kinds:
   - silent (a screen recording): it loops, muted. There is no `autoplay`: without
     JavaScript, or under reduced motion, it waits with the browser's own controls
     until you press play. Otherwise motion.js swaps those controls for a small
-    Pause button and plays it while it's on screen.
+    Pause button and plays it while at least half of it is on screen.
+    preload=\"none\": until it plays, the page shows the POSTER and downloads
+    nothing of the video itself (a few megabytes), so a visitor who never
+    scrolls to it, or asked for less motion, never pays for it.
   - :sound t (a demo with a voice-over): the browser's controls, and nothing is
     downloaded until you press play (see SOUND-VIDEO in media.lisp)."
-  (destructuring-bind (&key file poster caption sound) video
+  ;; ALT names the video for screen readers (aria-label); CAPTION, shown under
+  ;; it, is for everyone. Without an :alt the caption does both jobs.
+  (destructuring-bind (&key file poster caption alt sound) video
     (when (static-file-p file)
       (destructuring-bind (width height) (video-size file)
         `(:figure :class "demo" :data-reveal t
            (:div :class "demo-frame"
             ,@(if sound
-                  (list (sound-video file poster caption))
+                  (list (sound-video file poster (or alt caption)))
                   `((:video :class "demo-video" :data-demo-video t
                             :width ,width :height ,height
                             :poster ,(poster-or-nil poster)
-                            :muted t :loop t :playsinline t :preload "metadata" :controls t
+                            :muted t :loop t :playsinline t :preload "none" :controls t
+                            :aria-label ,(or alt caption)
                       (:source :src ,file :type "video/mp4"))
                     (:button :type "button" :class "diagram-toggle demo-toggle" :data-demo-toggle t
                              :hidden t :aria-label "Pause video" "Pause"))))
@@ -995,7 +1031,7 @@ then one numbered section per part. PARTS is a list of (heading panel content)."
   `((:div :class "hero case-hero"
       ,@(with-source hero-panel
           `(:p :class "eyebrow" :data-reveal t :style ,(stagger 0)
-             (:a :class "back" :href "./#projects" (:span :aria-hidden "true" "← ") "All work"))
+             (:a :class "back" :href "./#projects" (:span :aria-hidden "true" "← ") "All projects"))
           `(:h1 :data-reveal t :style ,(stagger 1) ,name)
           `(:p :class "intro" :data-reveal t :style ,(stagger 2) ,summary)
           `(:div :data-reveal t :style ,(stagger 3)
@@ -1056,7 +1092,7 @@ photo and the loop sit under the list, and each one shows only if its file exist
     (let ((photo (destructuring-bind (&key file alt) photo
                    (picture file alt :class "outside-photo")))
           (video (destructuring-bind (&key file poster alt) video
-                   (loop-video file poster :class "outside-video" :alt alt))))
+                   (loop-video file poster :class "outside-video" :alt alt :preload "none"))))
       `(:div :class "outside"
          (:h3 :class "sublabel" :data-reveal t "Outside work")
          (:ul :class "outside-list"
@@ -1095,7 +1131,7 @@ photo and the loop sit under the list, and each one shows only if its file exist
                       collect (project-card i project))))
   (section "skills" 4 "Skills"
            `(:p :class "section-intro" :data-reveal t
-                "What I've worked with at Canal+, at hackathons and in the projects above.")
+                "What I've worked with at Canal+, at a hackathon and in the projects above.")
            (skills))
   (section "education" 5 "Education"
            (timeline *education*)

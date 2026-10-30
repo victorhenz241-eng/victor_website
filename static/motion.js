@@ -199,7 +199,7 @@ if (header && "IntersectionObserver" in window) {
 // which leads back home). So "the href starts with #" means "this section is on
 // the page you're reading", and on a project page or the 404 nothing is highlighted. (Lighting up "Projects" there was tempting, but that link
 // leads to the home page, not to the page you're on, so it would be a small lie,
-// and aria-current would tell screen readers the same lie. The "← All work"
+// and aria-current would tell screen readers the same lie. The "← All projects"
 // link at the top already says where you are.)
 //
 // "The section you're reading" = the one crossing a thin band about a third of
@@ -366,7 +366,10 @@ document.querySelectorAll("[data-diagram]").forEach(setupDiagram);
 // controls, so it plays only if you press play. Same under reduced motion:
 // we leave it exactly like that. Otherwise we swap the browser's controls for a
 // small Pause button like the diagrams', and play it (muted, looping) while
-// it's on screen, unless you paused it yourself.
+// at least half of it is on screen, unless you paused it yourself.
+// The HTML says preload="none", so nothing of the video is downloaded until
+// play() is first called here: someone who never scrolls to it, or who asked for
+// less motion, only ever downloads its poster.
 
 document.querySelectorAll("[data-demo-video]").forEach((video) => {
   const button = video.parentElement.querySelector("[data-demo-toggle]");
@@ -392,10 +395,16 @@ document.querySelectorAll("[data-demo-video]").forEach((video) => {
   label();
 
   if ("IntersectionObserver" in window) {
-    new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting) video.pause();
-      else if (wanted) play();
-    }).observe(video);
+    // threshold 0.5: we're called back each time the visible part crosses one
+    // half, either way (and once at the start). isIntersecting only says "some of
+    // it is on screen", so we read intersectionRatio, the visible fraction (0 to 1).
+    new IntersectionObserver(
+      ([entry]) => {
+        if (entry.intersectionRatio < 0.5) video.pause();
+        else if (wanted) play();
+      },
+      { threshold: 0.5 }
+    ).observe(video);
   } else {
     play();
   }
@@ -460,7 +469,9 @@ document.querySelectorAll("[data-loop-video]").forEach((video) => {
   if ("IntersectionObserver" in window) {
     new IntersectionObserver(
       ([entry]) => {
-        inView = entry.isIntersecting;
+        // intersectionRatio is the visible fraction (0 to 1); isIntersecting
+        // would be true for any sliver (see the demo video above).
+        inView = entry.intersectionRatio >= 0.5;
         if (!inView) video.pause();
         else if (!stopped) play();
       },

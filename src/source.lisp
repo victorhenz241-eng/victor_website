@@ -32,7 +32,7 @@
   "Move STREAM past spaces, newlines and ; comments, so it sits on the next form's
 first character. (READ would skip them too, but then the comment above a form
 would end up inside our slice.) PEEK-CHAR looks at the next character without
-taking it; with NIL NIL it returns NIL at the end instead of signalling an error."
+taking it; with NIL NIL it returns NIL at the end instead of signaling an error."
   (loop for c = (peek-char nil stream nil nil)
         while c
         do (cond ((member c '(#\Space #\Tab #\Newline #\Return)) (read-char stream))
@@ -193,7 +193,7 @@ blank lines and comments between them, exactly as written."
 ;;; 3. The tokenizer: text -> colored spans
 ;;;
 ;;; It walks the text one character at a time and decides what each run of
-;;; characters is. It doesn't need to understand Lisp, only to recognise:
+;;; characters is. It doesn't need to understand Lisp, only to recognize:
 ;;;   ; comment        "string"        :keyword        ( ) ' ` , #'
 ;;;   (operator        anything-else  (plain symbols, numbers)
 ;;; Every piece stays a Lisp string, so the renderer escapes it like any text.

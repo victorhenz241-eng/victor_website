@@ -15,6 +15,20 @@
 
 /* ---------- 1. Tokens ---------- */
 
+/* Fallback fonts that take the same room as the real ones.
+   While Literata and Geist download, the text shows in Georgia and Arial
+   (display=swap). Literata is about 6% wider than Georgia, so the headline used
+   to break its lines differently, then jump when Literata arrived, pushing
+   everything below it down (a "layout shift"). These two @font-face rules
+   create new font names that are just Georgia and Arial scaled up or down
+   (size-adjust) to the real fonts' widths, measured on this site's own text.
+   local() means "a font already installed on this computer": nothing is
+   downloaded. A system without Georgia or Arial skips the rule and uses the
+   next font in the list. */
+@font-face { font-family: "Literata fallback"; src: local("Georgia"); size-adjust: 106.4%; }
+@font-face { font-family: "Literata fallback"; font-style: italic; src: local("Georgia Italic"), local("Georgia-Italic"); size-adjust: 98%; }
+@font-face { font-family: "Geist fallback"; src: local("Arial"), local("ArialMT"); size-adjust: 102.8%; }
+
 :root {
   --bg: #fafafb;
   --surface: #f1f1f3;
@@ -41,8 +55,8 @@
        --line           decoration only: dividers, resting borders
      The numbers for every pair are in LEARN.md ("Contrast, checked"). */
 
-  --font-display: "Literata", Georgia, serif;
-  --font-body: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Literata", "Literata fallback", Georgia, serif;
+  --font-body: "Geist", "Geist fallback", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
   --s1: 0.5rem; --s2: 1rem; --s3: 1.5rem; --s4: 2rem; --s6: 3rem; --s8: 4rem; --s12: 6rem;
@@ -145,8 +159,11 @@ kbd {
   position: sticky;
   top: 0;
   z-index: 10;
-  /* Translucent background + blur: the "frosted glass" effect. */
-  background: color-mix(in srgb, var(--bg) 80%, transparent);
+  /* Translucent background + blur: the "frosted glass" effect. 92% page color:
+     even with pure black (light theme) or pure white (dark theme) scrolling
+     underneath, the gray links keep at least 4.5:1 (4.8:1 and 5.9:1). At 80%
+     they fell to about 3.6:1. */
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--line);
@@ -199,7 +216,7 @@ kbd {
 /* Shrink on scroll. motion.js adds .is-scrolled once the top of the page is gone.
    Instead of changing the height (which would push the whole page around), we
    slide the header up by 8px and its content down by 4px: it *looks* 8px shorter
-   and the content stays centred. Only transforms, so it's cheap to animate.
+   and the content stays centered. Only transforms, so it's cheap to animate.
    The bottom border fades in at the same time, so the header detaches from the page.
    motion.js adds .tracks-scroll only once it is really watching the scroll, so
    without JS, or in a browser without IntersectionObserver, the border simply
@@ -326,7 +343,12 @@ kbd {
   font-size: clamp(2.5rem, 7vw, 4.25rem);
   letter-spacing: -0.025em;
   line-height: 1.05;
-  max-width: 14ch;
+  /* em, not ch: 1ch is the width of "0" in whatever font is showing, and
+     Georgia's "0" is much narrower than Literata's. With 14ch the box shrank
+     while the fallback font was up, "on" dropped to a third line, and the
+     page jumped when Literata arrived. 8.25em is about 14ch of Literata, with
+     a little room to spare: the first line "I build AI tools on" fills 96% of it. */
+  max-width: 8.25em;
 }
 
 .hero h1 em { font-style: italic; color: var(--muted); }
@@ -389,6 +411,10 @@ kbd {
   transition: color 0.2s, border-color 0.2s;
 }
 .terminal-toggle:hover { color: var(--term-text); border-color: rgb(255 255 255 / 0.3); }
+/* The usual focus ring is --accent, which in light mode is the same near-black
+   as the terminal: invisible (1:1). On the dark terminal it takes the
+   terminal's light text color instead (about 12:1). */
+.terminal-toggle:focus-visible { outline-color: var(--term-text); }
 
 .terminal-body {
   margin: 0;
@@ -503,8 +529,18 @@ kbd {
 /* The picture area. aspect-ratio keeps a 16:10 box whatever fills it, so the
    page never jumps while a video or photo loads. object-fit: cover fills that
    box and trims what sticks out, like a photo in a frame. */
+/* z-index 2 + pointer-events: none: the picture sits *above* the link's
+   invisible layer (.card-link::after, z-index 1), but lets clicks fall through
+   to it, so a click on the picture still opens the project. Only its Pause
+   button takes clicks back (pointer-events: auto, below). Why not just give
+   the button a bigger z-index? Because the hover lift (transform) turns
+   .card-media into a "stacking context": a closed box whose children's
+   z-index only counts *inside* it. The button then sank under the link the
+   moment the mouse arrived, and a click on Pause opened the case study. */
 .card-media {
   position: relative;
+  z-index: 2;
+  pointer-events: none;
   aspect-ratio: 16 / 10;
   overflow: hidden;
   border: 1px solid var(--line);
@@ -555,8 +591,9 @@ kbd {
   align-items: center;
 }
 
-/* The Pause button sits above the link's layer (z-index), bottom right. */
-.media-toggle { position: absolute; right: var(--s1); bottom: var(--s1); z-index: 2; }
+/* The Pause button, bottom right. pointer-events: auto takes back the clicks
+   that .card-media lets fall through (see above). */
+.media-toggle { position: absolute; right: var(--s1); bottom: var(--s1); z-index: 2; pointer-events: auto; }
 
 /* Fallback tiles: when there's no photo or video yet, the card draws something
    true from the project's data: a big number, the funnel, or the diagram.
@@ -1103,6 +1140,14 @@ kbd {
 }
 .diagram-toggle:hover { color: var(--text); border-color: var(--faint); }
 .diagram-toggle[hidden] { display: none; }
+/* A Pause button sitting on a video: the pixels behind it can be any color,
+   so the focus ring brings its own background. The box-shadow paints a ring of
+   page color 6px wide around the button, and the outline (2px, 2px away)
+   is drawn on top of it: ink on page color, whatever the video shows. */
+.media-toggle:focus-visible, .demo-toggle:focus-visible {
+  outline-offset: 2px;
+  box-shadow: 0 0 0 6px var(--bg);
+}
 
 /* The walk's steps, as a real list under the picture. motion.js marks the
    current step; without JS it's just a readable list. */
@@ -1402,11 +1447,23 @@ kbd {
     font-family: var(--font-mono);
     font-size: 0.75rem;
   }
-  .rail-links a { color: var(--muted); text-decoration: none; transition: color 0.2s; }
+  /* Small text makes a small target: "CV" alone is about 15×19 px. Each link
+     becomes a box at least 24×24 px (WCAG 2.5.8, "Target Size"): min-width
+     widens it to the right of the word, the padding makes it taller, and the
+     negative margin gives that height back, so nothing on screen moves. */
+  .rail-links a {
+    display: inline-block;
+    min-width: 1.5rem;
+    padding: 0.25rem 0;
+    margin: -0.25rem 0;
+    color: var(--muted);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
   .rail-links a:hover { color: var(--text); text-decoration: underline; }
 
   /* What the rail now says, the content doesn't need to repeat: the line above
-     the home page's headline, and the "← All work" link of a project page. */
+     the home page's headline, and the "← All projects" link of a project page. */
   .hero:not(.case-hero) > .view-rendered > .eyebrow,
   .case-hero .eyebrow { display: none; }
 }

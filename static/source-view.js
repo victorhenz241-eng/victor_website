@@ -155,7 +155,7 @@ function setupSourceView() {
 
   // Coming back to the site with source mode on: no animation, just show it.
   // The swap changes the height of every section, so if the address has a
-  // #section (like the "← All work" link to ./#projects), the browser's jump to
+  // #section (like the "← All projects" link to ./#projects), the browser's jump to
   // it may have landed on the old layout: jump again, to the new one.
   if (load()) {
     set(true, false, false);

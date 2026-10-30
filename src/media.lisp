@@ -146,7 +146,7 @@ purpose: a picture with no description is a bug."
 (defun poster-or-nil (poster)
   (when (static-file-p poster) poster))
 
-(defun loop-video (file poster &key (class "card-video") alt)
+(defun loop-video (file poster &key (class "card-video") alt (preload "metadata"))
   "A short silent loop (a project card), or NIL when FILE isn't there.
 muted + playsinline: phones only let a video play by itself when it is silent and
 plays inside the page (not full screen). There is no `autoplay` attribute:
@@ -154,13 +154,16 @@ motion.js plays it while it's on screen, and only when the visitor hasn't asked
 for less motion. Otherwise it simply shows its POSTER (or its first frame).
 ALT, when given, describes the video for screen readers (role=\"img\" + aria-label:
 \"read it like a picture\"). Without ALT the video is decoration and is hidden
-from them, like on a project card, whose title and text already say everything."
+from them, like on a project card, whose title and text already say everything.
+PRELOAD is how much the browser fetches before the video plays: \"metadata\" (the
+default, a few kilobytes: its size and length) or \"none\" (nothing at all, for a
+video far down the page that most visitors may never reach)."
   (when (static-file-p file)
     (destructuring-bind (width height) (video-size file)
       `(:video :class ,class :data-loop-video t
                :width ,width :height ,height
                :poster ,(poster-or-nil poster)
-               :muted t :loop t :playsinline t :preload "metadata"
+               :muted t :loop t :playsinline t :preload ,preload
                :role ,(when alt "img") :aria-label ,alt
                :aria-hidden ,(unless alt "true") :tabindex "-1"
          (:source :src ,file :type "video/mp4")))))
