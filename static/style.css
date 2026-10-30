@@ -1330,14 +1330,17 @@ kbd {
 
 /* About: the photo beside the text on wide screens (text 3 parts, photo 2,
    so about 40%), under it on phones. object-fit: cover crops the photo to a
-   portrait 4:5 frame, whatever its own shape. */
+   portrait 4:5 frame, whatever its own shape. align-items: center lines up the
+   middle of the photo with the middle of the text; with "start" the photo,
+   twice as tall as the text, hung far below the last paragraph. */
 .about-grid {
   display: grid;
   grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
   gap: var(--s6);
-  align-items: start;
+  align-items: center;
 }
-.about-figure { margin: 0; }
+/* Capped so the photo doesn't dwarf three short paragraphs. */
+.about-figure { margin: 0; max-width: 17rem; justify-self: end; }
 .about-photo {
   display: block;
   width: 100%;
@@ -1350,6 +1353,7 @@ kbd {
 }
 @media (max-width: 40rem) {
   .about-grid { grid-template-columns: minmax(0, 1fr); gap: var(--s4); }
+  .about-figure { justify-self: start; }
 }
 
 /* A photo gallery on a project page: two columns, square-ish crops. */
