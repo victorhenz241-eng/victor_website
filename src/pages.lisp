@@ -445,6 +445,12 @@ source panel for ID (see HOME-SECTION-SOURCE in source.lisp), it comes along."
   `(:section :id ,id :class "section"
      (:h2 :class "label" :data-reveal t
       (:span :class "label-num" ,(format nil "~2,'0d" number))
+      ;; On screen the CSS puts a gap between the number and the heading, but
+      ;; there's no space in the text itself, so screen readers said
+      ;; "01The challenge". This invisible ". " (see .sr-only) makes it
+      ;; "01. The challenge". The heading stays the last thing in the <h2>,
+      ;; which PAGE-SECTIONS relies on.
+      (:span :class "sr-only" ". ")
       ,heading)
      ,@(apply #'with-source panel content)))
 

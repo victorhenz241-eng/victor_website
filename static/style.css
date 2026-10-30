@@ -159,8 +159,11 @@ kbd {
   position: sticky;
   top: 0;
   z-index: 10;
-  /* Translucent background + blur: the "frosted glass" effect. */
-  background: color-mix(in srgb, var(--bg) 80%, transparent);
+  /* Translucent background + blur: the "frosted glass" effect. 92% page color:
+     even with pure black (light theme) or pure white (dark theme) scrolling
+     underneath, the gray links keep at least 4.5:1 (4.8:1 and 5.9:1). At 80%
+     they fell to about 3.6:1. */
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--line);
@@ -213,7 +216,7 @@ kbd {
 /* Shrink on scroll. motion.js adds .is-scrolled once the top of the page is gone.
    Instead of changing the height (which would push the whole page around), we
    slide the header up by 8px and its content down by 4px: it *looks* 8px shorter
-   and the content stays centred. Only transforms, so it's cheap to animate.
+   and the content stays centered. Only transforms, so it's cheap to animate.
    The bottom border fades in at the same time, so the header detaches from the page.
    motion.js adds .tracks-scroll only once it is really watching the scroll, so
    without JS, or in a browser without IntersectionObserver, the border simply
@@ -1444,11 +1447,23 @@ kbd {
     font-family: var(--font-mono);
     font-size: 0.75rem;
   }
-  .rail-links a { color: var(--muted); text-decoration: none; transition: color 0.2s; }
+  /* Small text makes a small target: "CV" alone is about 15×19 px. Each link
+     becomes a box at least 24×24 px (WCAG 2.5.8, "Target Size"): min-width
+     widens it to the right of the word, the padding makes it taller, and the
+     negative margin gives that height back, so nothing on screen moves. */
+  .rail-links a {
+    display: inline-block;
+    min-width: 1.5rem;
+    padding: 0.25rem 0;
+    margin: -0.25rem 0;
+    color: var(--muted);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
   .rail-links a:hover { color: var(--text); text-decoration: underline; }
 
   /* What the rail now says, the content doesn't need to repeat: the line above
-     the home page's headline, and the "← All work" link of a project page. */
+     the home page's headline, and the "← All projects" link of a project page. */
   .hero:not(.case-hero) > .view-rendered > .eyebrow,
   .case-hero .eyebrow { display: none; }
 }
