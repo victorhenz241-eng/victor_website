@@ -302,11 +302,11 @@ animation stays short.")
      :url "https://github.com/victorhenz241-eng/intership_finder"
      :featured t
      :blurb "Scans ~16,000 internship listings every night and surfaces the ~300 strong matches, for about €0 a month."
-     :summary "Scans ~16,000 internship listings every night and surfaces the strong matches: about 300 of the 1,375 roles scored in the inbox, as of October 2026. Six n8n workflows, a Rust dedup service and a Next.js app, for about €0 a month."
+     :summary "Scans ~16,000 internship listings every night and surfaces the strong matches: about 300 of the 1,375 roles in its inbox, as of October 2026. Six n8n workflows, a Rust dedup service and a Next.js app, for about €0 a month."
      :tags ("n8n" "Next.js" "Supabase" "Rust")
      :links (("Code" "https://github.com/victorhenz241-eng/intership_finder"))
      :stats (("~16,000" "listings scanned")
-             ("1,375" "roles scored in the inbox")
+             ("1,375" "roles in the inbox")
              ("6" "n8n workflows")
              ("≈ €0" "a month, all free tiers"))
      ;; An 8.5-second silent loop for the home page card: a role opens with its
@@ -341,7 +341,7 @@ animation stays short.")
       :after "What I built"
       :caption "Counted in the live app, as of October 2026: the numbers in the demo video. Bar lengths use a log scale, so the small steps stay visible."
       :steps (("~16,000" 16000 "listings scanned")
-              ("1,375" 1375 "scored in the inbox")
+              ("1,375" 1375 "in the inbox")
               ("~300" 300 "strong matches")
               ("20" 20 "in the pipeline")
               ("7" 7 "applications sent")))
