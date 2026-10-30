@@ -84,7 +84,7 @@ places to look (search for them in the file).
   stream's position before and after tells you exactly which characters it took.
   That's how the source view cuts out the real text of a form. → `form-slices` in
   `src/source.lisp` (LEARN Effect 9).
-- **A tokenizer.** Walking a string one character at a time and labelling runs of
+- **A tokenizer.** Walking a string one character at a time and labeling runs of
   characters ("this is a string", "this is a comment"). → `highlight`, then
   `split-lines` and `code-line` in `src/source.lisp`.
 - **Reading a file as bytes.** `(with-open-file (in path :element-type '(unsigned-byte 8)) ...)`

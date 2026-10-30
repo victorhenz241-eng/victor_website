@@ -1,11 +1,11 @@
-# victor-site
+# victor_website
 
 My personal website, generated with Common Lisp. No framework and no npm: SBCL,
 a small HTML renderer written by hand, plain CSS for the design and motion, and
-a few hundred lines of plain JavaScript.
+a little plain JavaScript.
 
 ```
-victor-site/
+victor_website/
 ├── CLAUDE.md              # instructions Claude Code reads (teaching mode)
 ├── LEARN.md               # start here: a tour of the code, then every effect explained
 ├── victor-site.asd        # project definition (which files, in which order)
@@ -93,37 +93,10 @@ A checklist. None of these can be done by the code for you.
 - [ ] **Make the repo public, or upgrade.** On GitHub's free plan, Pages only works for
       public repositories (a private one needs GitHub Pro or a paid plan). Once it's
       public, link it from the "This website" project: its `:url` in `content.lisp`
-      is `nil` with a `private:` TODO note next to it.
+      is still `nil`, with a `private:` note next to it.
 - [ ] **Tell the site where it lives.** Keep the repo name `victor_website`, or change
       `*base-path*` in `content.lisp` to match (the 404 page depends on it). If you buy
-      a domain, set `*domain*` instead (section 6): the build then also writes
-      `CNAME`, the `canonical` link and `og:url`.
-- [ ] **Drop in your media** (section 7). Each file appears on the site as soon as it
-      exists in `static/media/` and you rebuild. Until then the page falls back
-      gracefully (no broken image, no empty box):
-
-      | File in `static/media/` | Where it shows | Until then |
-      |---|---|---|
-      | `portrait.jpg` (you supply it: head and shoulders) | beside the About text | text only |
-      | `outside-running.jpg`, `outside-running-finish.mp4` + `-poster.jpg` | under "Outside work", in Education | no pictures there |
-      | `cut-the-line/01.jpg`, `02.jpg`… | "On the podium", on the Cut the Line page (sorted by name) | no section |
-      | `event-market-card.mp4` + `event-market-poster.jpg` | the Event-Market card on the home page | a small copy of its diagram |
-      | `event-market-demo.mp4` + `event-market-poster.jpg` | under the header of the Event-Market page, looping | no video |
-      | `internship-radar-card.mp4` + `internship-radar-card-poster.jpg` | the Internship Radar card on the home page | a small copy of its funnel |
-      | `internship-radar-demo.mp4` + `internship-radar-poster.jpg` | under the header of the Internship Radar page, looping | no video |
-
-      Then describe each photo for people who can't see it: `:alt` in `*about-photo*`
-      (and in `*outside-media*`), and the `:alts` list of the Cut the Line `:gallery` (one string per photo, same
-      order) in `content.lisp`. Delete the `private:` notes next to them.
-- [ ] **Confirm the Cut the Line text.** "My part" was written from the repo's commit
-      history (a `private: Victor to confirm role wording` note sits above it). Reword
-      it as you see fit.
-- [ ] **Review the About text.** Its second paragraph is a draft written from the CV.
-      In `content.lisp` it has a `;; private: DRAFT` note above it (never shown on the
-      site). Rewrite it in your own voice, then delete the note.
-- [ ] **Add your CV, if you want the CV link.** Export a copy *without your phone
-      number*, save it as `static/cv.pdf`, and change `("CV" nil)` to
-      `("CV" "cv.pdf")` in `*links*`.
+      a domain, see section 6.
 - [ ] **Look at the live site once.** Open a page, a project page, and a made-up
       address like `.../victor_website/a/b` (the 404 page, styled). Try ⌘K and
       "(λ) source". Then search the built files for leftovers:
@@ -141,9 +114,14 @@ A checklist. None of these can be done by the code for you.
 ## 6. Your own domain
 
 1. Buy it (e.g. `victorhenz.com`) from Cloudflare Registrar or Porkbun.
-2. In `src/content.lisp`, set `(defparameter *domain* "victorhenz.com")`. The build writes the `CNAME` file for you.
-3. At your registrar, add the DNS records GitHub shows under *Settings → Pages → Custom domain*.
-4. Tick **Enforce HTTPS** once it's available.
+2. In `src/content.lisp`, set `(defparameter *domain* "victorhenz.com")`. The build then
+   writes a `CNAME` file, the `canonical` link and `og:url`, and moves the 404 page's
+   links to the root of the domain.
+3. In the repo, go to **Settings → Pages → Custom domain**, type the domain and save.
+   This step is required: a site deployed by GitHub Actions (like this one) ignores the
+   `CNAME` file, so the domain set here is the one that counts.
+4. At your registrar, add the DNS records GitHub shows on that same page.
+5. Tick **Enforce HTTPS** once it's available.
 
 ## 7. Photos and videos
 
@@ -179,6 +157,27 @@ fixed presets: its 720p one turned the 108-second Cut the Line demo into 98 MB (
 1080p original is 27 MB). `media.swift` uses the same Apple frameworks but lets us
 choose the bitrate: the same demo is 10.5 MB at 720p.
 
+**Which file shows where.** Each file appears on the site as soon as it exists in
+`static/media/` and you rebuild. Without it, the page falls back gracefully (no broken
+image, no empty box):
+
+| File in `static/media/` | Where it shows | Without it |
+|---|---|---|
+| `portrait.jpg` | beside the About text | text only |
+| `outside-running.jpg`, `outside-running-finish.mp4` + `-poster.jpg` | under "Outside work", in Education | no pictures there |
+| `cut-the-line/01.jpg`, `02.jpg`… | "At the hackathon", on the Cut the Line page (sorted by name) | no section |
+| `cut-the-line-card.mp4` + `-poster.jpg` | the Cut the Line card on the home page | a big "1st" |
+| `cut-the-line-demo.mp4` + `cut-the-line-poster.jpg` | under the header of the Cut the Line page, with sound | no video |
+| `event-market-card.mp4` + `-poster.jpg` | the Event-Market card on the home page | a small copy of its diagram |
+| `event-market-demo.mp4` + `event-market-poster.jpg` | under the header of the Event-Market page, looping | no video |
+| `internship-radar-card.mp4` + `-poster.jpg` | the Internship Radar card on the home page | a small copy of its funnel |
+| `internship-radar-demo.mp4` + `internship-radar-poster.jpg` | under the header of the Internship Radar page, looping | no video |
+
+Each picture also needs a description for people who can't see it: `:alt` in
+`*about-photo*` and `*outside-media*`, the `:alts` list of the Cut the Line `:gallery`
+(one string per photo, same order), and `:alt` on each silent demo `:video`, all in
+`content.lisp`.
+
 **Keep the repo light.** GitHub warns about files over 50 MB and refuses them over
 100 MB. Keep every file under 15 MB (for a long demo, lower the bitrate:
 `scripts/prepare-media.sh video demo.mov my-demo.mp4 500`). `ls -lh static/media`
@@ -201,9 +200,11 @@ swift scripts/media.swift frame ~/Desktop/recording.mov static/media/event-marke
 app, edited down: `internship-radar-demo.mp4` (25 s, 1440×900, silent, it loops on
 the page) shows the inbox, the eligibility check, the filters, a role's fit score,
 the pipeline and the people search, with a short caption for each step;
-`internship-radar-card.mp4` (8.5 s, 960×600) is the fit score → pipeline moment. In
+`internship-radar-card.mp4` (8.5 s, 960×600) is the fit score → pipeline moment.
+The demo was later re-encoded smaller (3.4 MB instead of 6 MB, same size and look) with
+`ffmpeg -i in.mp4 -an -c:v libx264 -preset slow -tune animation -crf 24 -pix_fmt yuv420p -movflags +faststart -map_metadata -1 out.mp4`. In
 both, every company name, person name and the people found by search are blurred,
-because recruiters at those companies may watch. The edit (cuts, blur, slow zooms,
+for privacy. The edit (cuts, blur, slow zooms,
 captions, the dissolve that makes the loop seamless) was done once with ffmpeg and a
 throwaway script, not with `prepare-media.sh`: the blur boxes come from reading the
 text in every frame (Apple's Vision framework), then each frame was checked again
@@ -239,8 +240,9 @@ its space before the video loads. Delete a file and rebuild to remove it again.
 ## Next steps
 
 **Content:** every sentence in `content.lisp` comes from the CV or from the projects'
-own READMEs (the Radar funnel numbers were counted in the live system). See "Before you
-publish" above for the About draft and the CV. Keep `*repl*` factual and to four commands.
+own READMEs (the Radar funnel numbers were counted in the live app, October 2026, and
+match its demo video). `static/cv.pdf` is the public copy of the CV, without the phone
+number. Keep `*repl*` factual and to four commands.
 
 **Lisp**
 - [x] Generate one page per project from `*projects*` (add a `:slug`).

@@ -2,3 +2,9 @@ public/
 *.fasl
 .DS_Store
 .claude/worktrees/
+
+# Local editor and tool settings, never part of the site
+.claude/settings.local.json
+.vscode/
+.idea/
+*.swp
