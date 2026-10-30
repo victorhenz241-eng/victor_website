@@ -761,7 +761,7 @@ press play. Otherwise `motion.js` swaps those controls for a small Pause button 
 calls `video.play()` while the video is on screen (and pauses it when it leaves),
 unless you paused it yourself. `play()` returns a *promise* that fails if the browser
 refuses to play (some do, to save data or battery), so the code catches that and the
-button simply says "Play". How to record and compress the video: see README.
+button simply says "Play". How to record and compress the video: see docs/MEDIA.md.
 
 ---
 
@@ -833,7 +833,7 @@ scrolls into view, one after another (`--i`), with the same reveal as everything
 
 ### Preparing the files
 
-`scripts/prepare-media.sh` (README, section 7) turns originals into web versions and
+`scripts/prepare-media.sh` (docs/MEDIA.md) turns originals into web versions and
 removes the photos' metadata. Plain `sips` keeps a phone photo's GPS position, so
 the script uses a small Swift helper (Swift comes with macOS) and then checks the
 result with `sips -g all`.

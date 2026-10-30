@@ -10,7 +10,7 @@
 ;;;; With width and height on the tag, the browser reserves the right space before
 ;;;; the picture arrives, so the text below never jumps ("layout shift").
 ;;;;
-;;;; The files themselves are made by scripts/prepare-media.sh (see README).
+;;;; The files themselves are made by scripts/prepare-media.sh (see docs/MEDIA.md).
 
 (in-package #:victor-site)
 
