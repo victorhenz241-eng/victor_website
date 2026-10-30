@@ -5,7 +5,7 @@ where the code lives. Read it alongside the files.
 
 ## Start here: a tour of the code
 
-The whole site is about 2,100 lines of Lisp and 800 lines of JavaScript. You can
+The whole site is about 2,500 lines of Lisp and 900 lines of JavaScript. You can
 read all of it. This is a good order, with what to look for in each file.
 
 | # | File | What it does | Read it for |
@@ -22,6 +22,7 @@ read all of it. This is a good order, with what to look for in each file.
 | 10 | `static/motion.js` | scroll reveal, terminal, header, nav, diagrams, videos | IntersectionObserver, async/await, promises |
 | 11 | `static/command-menu.js` | the ⌘K menu | `<dialog>`, the ARIA combobox |
 | 12 | `static/source-view.js` | the "(λ) source" switch | `<template>`, localStorage |
+| 13 | `static/theme.js` | the auto / light / dark switch | `data-*` attributes, the `storage` event |
 
 A good first session: build once, open `public/index.html` in an editor next to
 `src/pages.lisp`, and find the Lisp that wrote each part of the HTML.
@@ -860,6 +861,63 @@ result with `sips -g all`.
 
 ---
 
+## Effect 14: the theme switch (auto, light, dark)
+
+**In plain words:** the button next to `(λ) source` (◐ auto, ☀ light, ☾ dark), or
+"Switch theme" in the ⌘K menu, cycles through three settings. "Auto" is where
+everyone starts: the site follows the light or dark setting of your computer or
+phone. The other two stay put whatever the system says, and the choice is
+remembered on your next visit.
+
+**Step 1: the system's choice.** `@media (prefers-color-scheme: dark) { … }` in CSS
+applies its rules only when the OS is in dark mode. All the colors are custom
+properties (`--bg`, `--text`…, section 1 of `style.css`), so the dark theme is just
+a second set of values for the same names.
+[MDN: prefers-color-scheme](https://developer.mozilla.org/en-US/docs/Web/CSS/@media/prefers-color-scheme)
+
+**Step 2: your choice wins.** JS writes the choice on the `<html>` tag:
+`<html data-theme="dark">` (`root.dataset.theme = "dark"` in JS). The CSS has two
+dark rules with the same values:
+
+```css
+:root[data-theme="dark"] { --bg: #0e1114; … }        /* you picked dark */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #0e1114; … } /* system dark, unless you picked light */
+}
+```
+
+"Auto" removes the attribute, so only the media query is left. Why the same values
+twice? A selector list (`a, b { … }`) can't contain a media query, so the two cases
+can't share one rule. `color-scheme: dark` goes in both: it tells the browser to
+draw its own parts (scrollbars, form controls) dark too.
+
+**Step 3: no flash.** `theme.js` is loaded with `defer`, so it runs after the HTML
+is read, and the browser may already have painted the page once by then. Someone who
+picked dark on a light system would see a white flash on every page. So
+`*theme-script*` in `pages.lisp`, ten short lines, sits *inside* the `<head>`, before
+the stylesheets: a script there runs before anything is drawn, so `data-theme` is
+already set when the first paint happens. It also points the phone's browser bar
+(the two `theme-color` metas) at the chosen theme. It's written with `(:raw …)`
+because `render` would otherwise escape its quotes and `=>`.
+
+**Step 4: the button** (`theme-toggle` in `pages.lisp`, `static/theme.js`). Three
+settings don't fit `aria-pressed` (that's for on/off), so the `aria-label` says
+where you are and what pressing does: "Theme: dark. Switch to auto." A hidden live
+region also says "Theme: dark" after each change. The choice is saved in
+localStorage (`try`/`catch`, like the source view), and the `storage` event keeps
+other open tabs in sync.
+
+**Step 5: a soft change.** For 0.3s, `theme.js` puts `.theme-changing` on `<html>`,
+which gives every element a color transition, so the page fades from one theme to
+the other instead of blinking. Under reduced motion it isn't added and the colors
+just switch.
+
+**Try it:** set your OS to dark, pick "light" on the site, reload: no flash. Then
+open DevTools, Application → Local Storage, and delete `victor-site:theme`: the
+next page load is back to auto.
+
+---
+
 ## The rule that applies to every effect: reduced motion
 
 Some people get dizzy from animations and turn on "Reduce motion" in their OS.
@@ -915,7 +973,9 @@ lighter color on top.
 - `canonical` and `og:url`: the page's one true address. Only written once
   `*domain*` is set (`page-url`), because without a domain the final address isn't
   certain, and a wrong one is worse than none.
-- `theme-color`, one per theme: the color phones give the browser bar.
+- `theme-color`, one per theme: the color phones give the browser bar. When a
+  visitor picks a theme by hand, `*theme-script*` and `theme.js` switch their
+  `media` to `all` / `not all` so the bar matches (Effect 14).
 - `favicon.svg` (in `static/`): the tab icon, a λ whose color follows the theme
   thanks to a `prefers-color-scheme` query *inside* the SVG. Without any icon, every
   visit makes a request for `/favicon.ico` that ends in a 404.
