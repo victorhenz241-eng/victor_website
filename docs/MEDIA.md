@@ -60,10 +60,12 @@ Each picture also needs a description for people who can't see it: `:alt` in
 `scripts/prepare-media.sh video demo.mov my-demo.mp4 500`). `ls -lh static/media`
 shows the sizes.
 
-**The Event-Market videos** are a recording of the live demo replaying "Why did the
-VIX move in June?" (light theme): `event-market-demo.mp4` is the whole run (15 s,
+**The Event-Market videos** are a recording of the live demo replaying "What was
+Brent's largest daily move in the last 90 days…?" (light theme): `event-market-demo.mp4` is the whole run (12.7 s,
 1280×800, silent, it loops on the page), `event-market-card.mp4` is 9 s of it cropped
-to the graph and the agent's panel, and `event-market-poster.jpg` is the frame at 8 s.
+to the graph and the agent's panel, and `event-market-poster.jpg` is the frame at 6 s of the run. They were last redone on 2026-11-07
+after the live demo changed (new questions, new look), with a headless Chrome
+screencast at 2×.
 To redo them from a new recording (⌘⇧5, *Record Selected Portion*, saved on the
 Desktop as `recording.mov`; the card then shows the whole recorded area):
 

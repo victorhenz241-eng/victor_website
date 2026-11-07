@@ -250,9 +250,9 @@ animation stays short.")
      ;; page adds a "Live demo" link after the caption.
      :video (:file "media/event-market-demo.mp4"
              :poster "media/event-market-poster.jpg"
-             :caption "A recorded replay of the live demo. The agent answers: \"Why did the VIX move in June?\""
+             :caption "A recorded replay of the live demo. The agent answers: \"What was Brent's largest daily move in the last 90 days, and which events came just before it?\""
              ;; :alt names the video for screen readers; the caption is for everyone.
-             :alt "Screen recording of the Event-Market Graph demo: the agent answers \"Why did the VIX move in June?\" while the graph nodes and paths it walks light up.")
+             :alt "Screen recording of the Event-Market Graph demo: the agent answers \"What was Brent's largest daily move in the last 90 days?\" (crude oil rose 11.9% on 23 July) while the graph nodes and paths it walks light up.")
      ;; Each section is (heading paragraph paragraph ...).
      :sections
      (("The question"
