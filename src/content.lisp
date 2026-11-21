@@ -299,12 +299,12 @@ animation stays short.")
              (theme "and the Theme of each event"))))
     (:name "Internship Radar"
      :slug "internship-radar"
-     :url "https://github.com/victorhenz241-eng/intership_finder"
+     :url "https://github.com/victorhenz241-eng/internship-finder"
      :featured t
      :blurb "Scans ~16,000 internship listings every night and surfaces the ~300 strong matches, for about €0 a month."
      :summary "Scans ~16,000 internship listings every night and surfaces the strong matches: about 300 of the 1,375 roles in its inbox, as of October 2026. Six n8n workflows, a Rust dedup service and a Next.js app, for about €0 a month."
      :tags ("n8n" "Next.js" "Supabase" "Rust")
-     :links (("Code" "https://github.com/victorhenz241-eng/intership_finder"))
+     :links (("Code" "https://github.com/victorhenz241-eng/internship-finder"))
      :stats (("~16,000" "listings scanned")
              ("1,375" "roles in the inbox")
              ("6" "n8n workflows")
